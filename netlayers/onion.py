@@ -59,6 +59,12 @@ class Socks5Proxy(CapTPSocket):
             return "Host unreachable"
         elif error_number == b"\x05":
             return "Connection refused"
+        elif error_number == b"\x06":
+            return "TTL expired"
+        elif error_number == b"\x07":
+            return "Command not supported"
+        elif error_number == b"\x08":
+            return "Address type not supported"
         return f"Unknown error {error_number}"
 
     def connect(self, address, port) -> None:
