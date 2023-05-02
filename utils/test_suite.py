@@ -12,9 +12,12 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
+import time
 import unittest
 
 from utils.cryptography import Crypto
+from contrib.syrup import Record, Symbol, syrup_encode
+
 
 class CapTPTestLoader(unittest.loader.TestLoader):
     """ Custom loader which provides the netlayer when constructing the test cases """
@@ -63,3 +66,44 @@ class CapTPTestCase(unittest.TestCase, Crypto):
     def tearDown(self) -> None:
         self.netlayer.close()
         return super().tearDown()
+
+
+class CompleteCapTPTestCase(CapTPTestCase):
+    """ Sets up a CapTP session for each test case """
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        # Get their `op:start-session` message
+        remote_start_session = self.netlayer.receive_message()
+
+        # Send our `op:start-session`
+        pubkey, privkey = self._generate_key()
+        location = self.netlayer.location
+        my_location = Record(
+            label=Symbol("my-location"),
+            args=(location,)
+        )
+        location_sig = privkey.sign(syrup_encode(my_location))
+        start_session_op = Record(
+            label=Symbol("op:start-session"),
+            args=(
+                remote_start_session.args[0],
+                self._key_pair_to_captp(pubkey),
+                location,
+                self._signature_to_captp(location_sig)
+            )
+        )
+        self.netlayer.send_message(start_session_op)
+
+    def expect_message(self, label, timeout=30):
+        """ Reads a message until it gets a message with the given label """
+        # We want to ensure we don't go over our timeout, so keep track of how
+        # much time we've spent waiting
+        while timeout >= 0:
+            start_time = time.time()
+            message = self.netlayer.receive_message(timeout=timeout)
+            end_time = time.time()
+            if message.label == label:
+                return message
+            timeout -= end_time - start_time

@@ -18,7 +18,7 @@ from contrib.syrup import Record, Symbol, syrup_encode
 from utils.test_suite import CapTPTestCase
 
 class OPStartSession(CapTPTestCase):
-    """ Test the `op:start-session` operation """
+    """ `op:start-session` - used to begin the CapTP session """
 
     def test_captp_remote_version(self):
         """ Remote CapTP session sends a valid `op:start-session` """
