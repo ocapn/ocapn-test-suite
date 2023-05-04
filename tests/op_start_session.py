@@ -49,12 +49,12 @@ class OPStartSession(CapTPTestCase):
         location_sig = privkey.sign(syrup_encode(location))
         start_session_op = Record(
             label=Symbol("op:start-session"),
-            args=(
+            args=[
                 "invalid-version-number",
                 self._key_pair_to_captp(pubkey),
                 location,
                 self._signature_to_captp(location_sig)
-            )
+            ]
         )
         self.netlayer.send_message(start_session_op)
 
@@ -73,12 +73,12 @@ class OPStartSession(CapTPTestCase):
         invalid_location_sig = privkey.sign(b"i am invalid")
         start_session_op = Record(
             label=Symbol("op:start-session"),
-            args=(
+            args=[
                 remote_start_session.args[0],
                 self._key_pair_to_captp(pubkey),
                 location,
                 self._signature_to_captp(invalid_location_sig)
-            )
+            ]
         )
         self.netlayer.send_message(start_session_op)
 
