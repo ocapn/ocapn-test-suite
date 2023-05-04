@@ -64,7 +64,7 @@ class CapTPSocket(socket.socket):
         encoded_message = syrup.syrup_encode(message)
         self.sendall(encoded_message)
 
-    def receive_message(self, timeout=30):
+    def receive_message(self, timeout=60):
         """ Receive data from the remote machine """
         socketio = ReadSocketIO(self, timeout=timeout)
         return syrup.syrup_read(socketio)
