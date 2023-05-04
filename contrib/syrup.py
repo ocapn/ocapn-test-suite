@@ -18,10 +18,15 @@ class SyrupSingleFloatsNotSupported(Exception): pass
 class Record:
     def __init__(self, label, args):
         self.label = label
-        self.args = args
+        self.args = list(args)
 
     def __repr__(self):
         return "<Record %s: %r>" % (self.label, self.args)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Record) and \
+            other.label == self.label and \
+            other.args == self.args
 
 class Symbol:
     def __init__(self, name):
