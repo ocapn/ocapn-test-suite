@@ -59,6 +59,8 @@ This takes a single argument which is a reference to another object. Upon
 receipt of a message it should send the greeting "Hello" (string) to the object
 referenced by the argument.
 
+This should be available at the swiss num: "VMDDd1voKWarCe2GvgLbxbVFysNzRPzx"
+
 ## Licence
 
 Apache 2.0 License. See the LICENSE file for details.
