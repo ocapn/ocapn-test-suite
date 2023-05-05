@@ -39,8 +39,10 @@ class CapTPTestRunner(unittest.TextTestRunner):
         super().__init__(*args, **kwargs)
         self.netlayer = netlayer
 
-    def loadTests(self):
+    def loadTests(self, test_module=None):
         loader = CapTPTestLoader(self.netlayer)
+        if test_module:
+            return loader.loadTestsFromName(test_module)
         return loader.discover("tests", pattern="*.py")
 
 class CapTPTestSuite(unittest.TestSuite):

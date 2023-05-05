@@ -36,6 +36,11 @@ if __name__ == "__main__":
         "locator",
         help="OCapN Machine locator to test against"
     )
+    parser.add_argument(
+        "--test-module",
+        help="Specific test module to run",
+        default=None
+    )
     args = parser.parse_args()
 
     # Parse and validate the address
@@ -51,5 +56,5 @@ if __name__ == "__main__":
         sys.exit(1)
 
     runner = CapTPTestRunner(netlayer)
-    suite = runner.loadTests()
+    suite = runner.loadTests(args.test_module)
     runner.run(suite)
