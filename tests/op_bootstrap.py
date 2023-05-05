@@ -22,25 +22,22 @@ class OpBootstrap(CompleteCapTPTestCase):
 
     def test_op_bootstrap(self):
         """ Check we can fetch the bootstrap object """
-        # Ask for the bootstrap object to be exported at position 0
-        # And for us to get a resolution message back at position 0.
+        # Get an import-object for the resolve-me-desc and send a bootstrap
+        # object asking for it to be available at answer position `0`.
+        resolve_me_desc = self._next_import_object
         bootstrap_op = Record(
             Symbol("op:bootstrap"),
-            (0, Record(Symbol("desc:import-object"), (0,)))
+            [0, resolve_me_desc]
         )
         self.netlayer.send_message(bootstrap_op)
 
-        # Wait for the resolution message, it could be the other implementation
-        # sends other messages such as `op:bootstrap` to us, ignore those.
-        response = self.expect_message(Symbol("op:deliver-only"))
-        if response is None:
+        # Wait for a message to the resolve-me-desc we specified.
+        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
+        response = self._expect_message_to(exported_resolve_me_desc)
+        if not isinstance(response, Record):
             raise Exception("op:bootstrap promise was never fulfilled")
 
-        # Check it's to the desc:import-object we specified.
-        self.assertTrue(isinstance(response.args[0], Record))
-        self.assertEqual(response.args[0].label, Symbol("desc:export"))
-        self.assertEqual(response.args[0].args[0], 0)
-        
+        # Check it's fulfilling the promise with a `desc:import-object`.
         message_args = response.args[1]
         self.assertEqual(message_args[0], Symbol("fulfill"))
         self.assertTrue(isinstance(message_args[1], Record))

@@ -76,7 +76,7 @@ class CompleteCapTPTestCase(CapTPTestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._bootstrap_object = None
-        self._next_answer_pos = 1 # we use zero for the bootstrap object.
+        self._next_answer_pos = 0
         self._next_object_pos = 0
 
     def setUp(self) -> None:
@@ -136,31 +136,39 @@ class CompleteCapTPTestCase(CapTPTestCase):
         self._next_answer_pos += 1
         return answer
     
-    @property
-    def bootstrap_object(self):
+    def get_bootstrap_object(self, pipeline=False):
+        """" Gets the bootstrap object from the remote session """
         if self._bootstrap_object is not None:
             return self._bootstrap_object
 
-        self._bootstrap_object = self._next_import_object
+        answer = self._next_answer
+        bootstrap_resolve_me = self._next_import_object
         bootstrap_op = Record(
             Symbol("op:bootstrap"),
-            [0, self._bootstrap_object]
+            [answer.args[0], bootstrap_resolve_me]
         )
         self.netlayer.send_message(bootstrap_op)
+        if pipeline:
+            return answer
+        
+        export_desc = self._import_object_to_export(bootstrap_resolve_me)
+        maybe_fulfill = self._expect_message_to(export_desc)
+        to, args = maybe_fulfill.args
+        assert args[0] == Symbol("fulfill")
+        self._bootstrap_object = self._import_object_to_export(args[1])
         return self._bootstrap_object
 
     def _fetch_object(self, swiss_num, pipeline=False):
         """ Fetches an object from the remote bootstrap object """
-        resolve_me_desc = Record(
-            Symbol("desc:resolve-me"),
-            [0]
-        )
+        bootstrap_object = self.get_bootstrap_object(pipeline=pipeline)
+        resolve_me_desc = self._next_import_object
+        answer_pos = self._next_answer_pos if pipeline else False
         fetch_msg = Record(
             Symbol("op:deliver"),
             [
-                self.bootstrap_object,
-                [Symbol("fetch")],
-                self._next_answer_pos if pipeline else False,
+                bootstrap_object,
+                [Symbol("fetch"), swiss_num],
+                answer_pos,
                 resolve_me_desc
             ]
         )
@@ -169,12 +177,16 @@ class CompleteCapTPTestCase(CapTPTestCase):
         if pipeline:
             object_location = Record(
                 Symbol("desc:answer"),
-                [self._next_answer_pos]
+                [answer_pos]
             )
             self._next_answer_pos += 1
             return object_location
         else:
-            return self.expect_message_to(resolve_me_desc)
+            export_desc = self._import_object_to_export(resolve_me_desc)
+            maybe_fullfill = self._expect_message_to(export_desc)
+            to, args = maybe_fullfill.args
+            assert args[0] == Symbol("fulfill")
+            return self._import_object_to_export(args[1])
 
     def _expect_message_to(self, recipient, timeout=60):
         """ Reads messages until one is sent to the given recipient """
@@ -194,5 +206,40 @@ class CompleteCapTPTestCase(CapTPTestCase):
             # If the message is to the recipient, return it
             if message.args[0] == recipient:
                 return message
+    
+    def _expect_promise_resolution(self, resolve_me_desc, timeout=60):
+        """ Reads until a promise resolves to a value """        
+        while timeout >= 0:
+            start_time = time.time()
+            message = self._expect_message_to(resolve_me_desc, timeout=timeout)
+            end_time = time.time()
+            timeout -= end_time - start_time
+
+            # Check it's a fulfill
+            to, args = message.args
+            assert args[0] in [Symbol("fulfill"), Symbol("break")]
+
+            # If the promise has broken, return that.
+            if args[0] == Symbol("break"):
+                return message
+
+            # If the resolution is another promise, keep going
+            if isinstance(args[1], Record) and args[1].label == Symbol("desc:import-promise"):
+                # Now we have to construct a listen message to get the answer
+                # from the promise provided to us.
+                new_resolve_me_desc = self._next_import_object
+                listen_msg = Record(
+                    Symbol("op:listen"),
+                    [
+                        self._import_object_to_export(args[1]),
+                        new_resolve_me_desc,
+                        False # TODO: wants-partial? maybe deprecate
+                    ]
+                )
+                self.netlayer.send_message(listen_msg)
+                resolve_me_desc = self._import_object_to_export(new_resolve_me_desc)
+                continue
+
+            return message
                 
 
