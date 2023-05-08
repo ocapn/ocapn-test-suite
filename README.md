@@ -61,6 +61,15 @@ referenced by the argument.
 
 This should be available at the swiss num: "VMDDd1voKWarCe2GvgLbxbVFysNzRPzx"
 
+### Promise resolver
+
+This takes no arguments and returns a promise and a resolver. When the resolver
+is sent a message, the first argument should either be the symbol `break` or the
+symbol `fulfill`, the other arguments should be the error or value to resole the
+promise with.
+
+This should be available at the swiss num: "IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr"
+
 ## Licence
 
 Apache 2.0 License. See the LICENSE file for details.
