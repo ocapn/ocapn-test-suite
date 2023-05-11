@@ -54,9 +54,8 @@ class OpListen(CompleteCapTPTestCase):
         )
         return listen_op, resolve_me_desc
 
-
     def test_op_listen_to_promise_and_fulfill(self):
-        """ Get a notification when a promise is fulfilled """
+        """ Notified when a promise is fulfilled """
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
         vow_refr = self._import_object_to_export(vow)
@@ -81,7 +80,7 @@ class OpListen(CompleteCapTPTestCase):
         self.assertEqual(response.args[1][1], resolved_promise_with)
     
     def test_op_listen_to_promise_and_break(self):
-        """ Get a notification when a promise is broken """
+        """ Notified when a promise is broken """
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
         vow_refr = self._import_object_to_export(vow)
@@ -106,7 +105,7 @@ class OpListen(CompleteCapTPTestCase):
         self.assertEqual(response.args[1][1], err_symbol)
 
     def test_op_listen_already_has_answer(self):
-        """ We get a notification when listening on a resolved promise """
+        """ Notified when listening on a resolved promise """
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
         vow_refr = self._import_object_to_export(vow)
@@ -129,3 +128,31 @@ class OpListen(CompleteCapTPTestCase):
         response = self._expect_promise_resolution(exported_resolve_me_desc)
         self.assertEqual(response.args[1][0], Symbol("fulfill"))
         self.assertEqual(response.args[1][1], resolved_promise_with)
+    
+    def disabled_test_op_listen_on_answer(self):
+        """ Notified when listening on a desc:answer """
+        # Lets use the echo object for this test
+        echo_refr = self._fetch_object(b"IO58l1laTyhcrgDKbEzFOO32MDd6zE5w")
+
+        # Send a message to get a `desc:answer`
+        answer_desc = self._next_answer
+        echo_msg = Record(
+            Symbol("op:deliver"),
+            [
+                echo_refr,
+                ["hello"],
+                answer_desc,
+                self._next_import_object
+            ]
+        )
+        self.netlayer.send_message(echo_msg)
+
+        # Now lets listen on the answer
+        listen_op, resolve_me_desc = self.make_listen_msg(answer_desc)
+        self.netlayer.send_message(listen_op)
+
+        # Check we get a resolution to our object.
+        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
+        response = self._expect_promise_resolution(exported_resolve_me_desc)
+        self.assertEqual(response.args[1][0], Symbol("fulfill"))
+        self.assertEqual(response.args[1][1], Symbol("hello"))
