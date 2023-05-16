@@ -11,6 +11,12 @@ import io
 import struct
 import string
 
+__all__ = [
+    "SyrupDecodeError", "SyrupEncodeError", "SyrupSingleFloatsNotSupported",
+    "Record", "Symbol",
+    "syrup_encode", "syrup_read", "syrup_decode"
+]
+
 class SyrupDecodeError(Exception): pass
 class SyrupEncodeError(Exception): pass
 class SyrupSingleFloatsNotSupported(Exception): pass
@@ -234,9 +240,3 @@ def syrup_read(f, convert_singles=False):
         
 def syrup_decode(bstr, convert_singles=False):
     return syrup_read(io.BytesIO(bstr), convert_singles=convert_singles)
-
-
-__all__ = [
-    SyrupDecodeError, SyrupEncodeError, SyrupSingleFloatsNotSupported,
-    Record, Symbol,
-    syrup_encode, syrup_read, syrup_decode]
