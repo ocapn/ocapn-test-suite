@@ -14,12 +14,13 @@
 
 from contrib.syrup import Record, Symbol, syrup_encode
 from utils.test_suite import CapTPTestCase
-from utils.captp_types import *
+from utils.captp_types import OpStartSession, OpAbort, OpBootstrap, DescImportObject
+
 
 class OpBootstrapTest(CapTPTestCase):
     """ `op:abort` - end a session through aborting """
 
-    def _setup_session(self, remote_op_start_session: Record):
+    def _setup_session(self, remote_op_start_session: OpStartSession):
         """ Sends a valid `op:start-session` """
         pubkey, privkey = self._generate_key()
         location = self.netlayer.location
@@ -61,7 +62,7 @@ class OpBootstrapTest(CapTPTestCase):
 
         # Setup the session
         self._setup_session(remote_op_start_session)
-        
+
         # Lets then abort the session and then send our `op:start-session`
         abort_op = OpAbort("test-abort-after-setup")
         self.remote.send_message(abort_op)

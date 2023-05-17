@@ -1,24 +1,23 @@
-## Copyright 2023 Jessica Tallon
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-##     http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-
-import unittest
+# Copyright 2023 Jessica Tallon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import Tuple
 
-from contrib.syrup import Record, Symbol, syrup_encode
+from contrib.syrup import Symbol
 from utils.test_suite import CompleteCapTPTestCase
-from utils.captp_types import *
+from utils.captp_types import OpDeliver, OpDeliverOnly, DescImportObject, OpListen
+
 
 class OpListenTest(CompleteCapTPTestCase):
     """ `op:listen` - Request notification on a promise """
@@ -33,7 +32,7 @@ class OpListenTest(CompleteCapTPTestCase):
         if self._promise_resolver_refr is None:
             self._promise_resolver_refr = self._fetch_object(b"IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr")
         return self._promise_resolver_refr
-    
+
     def make_promise_resolver_pair(self) -> Tuple[DescImportObject, DescImportObject]:
         """ Returns a promise and resolver pair """
         deliver_op = OpDeliver(
@@ -71,7 +70,7 @@ class OpListenTest(CompleteCapTPTestCase):
         # Check we get a resolution to our object.
         response = self._expect_promise_resolution(listen_op.exported_resolve_me_desc)
         self.assertEqual(response.args, [Symbol("fulfill"), resolved_promise_with])
-    
+
     def test_op_listen_to_promise_and_break(self):
         """ Notified when a promise is broken """
         # First lets get a promise and resolver
@@ -121,31 +120,20 @@ class OpListenTest(CompleteCapTPTestCase):
         # Check we get a resolution to our object.
         response = self._expect_promise_resolution(listen_op.exported_resolve_me_desc)
         self.assertEqual(response.args, [Symbol("fulfill"), resolved_promise_with])
-    
+
     def disabled_test_op_listen_on_answer(self):
         """ Notified when listening on a desc:answer """
         # Lets use the echo object for this test
         echo_refr = self._fetch_object(b"IO58l1laTyhcrgDKbEzFOO32MDd6zE5w")
 
         # Send a message to get a `desc:answer`
-        answer_desc = self._next_answer
-        echo_msg = Record(
-            Symbol("op:deliver"),
-            [
-                echo_refr,
-                ["hello"],
-                answer_desc,
-                self._next_import_object
-            ]
-        )
-        self.netlayer.send_message(echo_msg)
+        echo_msg = OpDeliver(echo_refr, ["hello"], self._next_answer.position, self._next_import_object)
+        self.remote.send_message(echo_msg)
 
         # Now lets listen on the answer
-        listen_op, resolve_me_desc = self.make_listen_msg(answer_desc)
-        self.netlayer.send_message(listen_op)
+        listen_op = OpListen(echo_msg.exported_resolve_me_desc, self._next_import_object, wants_partial=False)
+        self.remote.send_message(listen_op)
 
         # Check we get a resolution to our object.
-        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
-        response = self._expect_promise_resolution(exported_resolve_me_desc)
-        self.assertEqual(response.args[1][0], Symbol("fulfill"))
-        self.assertEqual(response.args[1][1], Symbol("hello"))
+        response = self._expect_promise_resolution(listen_op.exported_resolve_me_desc)
+        self.assertEqual(response.args, [Symbol("fulfill"), Symbol("hello")])

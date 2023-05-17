@@ -1,22 +1,23 @@
-## Copyright 2023 Jessica Tallon
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-##     http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
+# Copyright 2023 Jessica Tallon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from abc import ABC, abstractmethod
 import socket
 
 from contrib import syrup
 from utils.captp_types import CapTPType, decode_captp_message
 from utils.ocapn_uris import OCapNMachine
+
 
 class ReadSocketIO:
     """ Wrapper around a socket which allows us to read from it like a file """
@@ -27,7 +28,7 @@ class ReadSocketIO:
         self._seek_position = 0
         if timeout is not None:
             self._socket.settimeout(timeout)
-    
+
     def read(self, size):
         """ Read up to `size` bytes from the socket """
         amount_read_ahead = len(self._buffer) - self._seek_position
@@ -49,16 +50,17 @@ class ReadSocketIO:
         """ Seek to a position in the buffer """
         if position < 0:
             raise Exception("Cannot seek to negative position")
-        
+
         # We could allow for seeking forward, but we don't need it
         if position > self._seek_position:
             raise Exception("Cannot seek forward")
-        
+
         self._seek_position = position
-    
+
     def tell(self):
         """ Return the current position in the buffer """
         return self._seek_position
+
 
 class CapTPSocket(socket.socket):
 
@@ -68,7 +70,7 @@ class CapTPSocket(socket.socket):
     @classmethod
     def from_socket(cls, socket):
         """ Creates a CapTPSocket from a socket
-        
+
         Important: This will detach the socket from the original socket object,
         do not continue to use the original socket object after calling this.
         """
@@ -78,7 +80,7 @@ class CapTPSocket(socket.socket):
         return captp_socket
 
     def send_message(self, message):
-        """ Send data to the remote machine """      
+        """ Send data to the remote machine """
         if isinstance(message, CapTPType):
             message = message.to_syrup_record()
         encoded_message = syrup.syrup_encode(message)
@@ -91,6 +93,7 @@ class CapTPSocket(socket.socket):
         assert isinstance(encoded_message, syrup.Record)
         return decode_captp_message(encoded_message)
 
+
 class Netlayer(ABC):
     """ Base class for all netlayers """
 
@@ -98,4 +101,3 @@ class Netlayer(ABC):
     def connect(self, ocapn_machine: OCapNMachine) -> CapTPSocket:
         """ Connect to a remote machine returning a connection """
         pass
-        

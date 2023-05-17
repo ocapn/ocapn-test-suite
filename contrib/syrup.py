@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-### BE FOREWRANED:
-###
-### This is a simple implementation in recursive descent style, mirrored
-### off of the Racket/Guile scheme implementations.  However, a recursive
-### descent implementation is unlikely to be all to safe in Python-land
-### because there's no tail-call-elimination.
+# BE FOREWRANED:
+#
+# This is a simple implementation in recursive descent style, mirrored
+# off of the Racket/Guile scheme implementations.  However, a recursive
+# descent implementation is unlikely to be all to safe in Python-land
+# because there's no tail-call-elimination.
 
 import io
 import struct
@@ -17,9 +17,18 @@ __all__ = [
     "syrup_encode", "syrup_read", "syrup_decode"
 ]
 
-class SyrupDecodeError(Exception): pass
-class SyrupEncodeError(Exception): pass
-class SyrupSingleFloatsNotSupported(Exception): pass
+
+class SyrupDecodeError(Exception):
+    pass
+
+
+class SyrupEncodeError(Exception):
+    pass
+
+
+class SyrupSingleFloatsNotSupported(Exception):
+    pass
+
 
 class Record:
     def __init__(self, label, args):
@@ -34,25 +43,28 @@ class Record:
             other.label == self.label and \
             other.args == self.args
 
+
 class Symbol:
     def __init__(self, name):
         self.name = name
 
     def __repr__(self):
         return "Symbol(%s)" % self.name
-    
+
     def __str__(self):
         return self.name
-    
+
     def __hash__(self) -> int:
         return hash(self.name)
-    
+
     def __eq__(self, other):
         return isinstance(other, Symbol) and other.name == self.name
+
 
 def netstring_encode(bstr, joiner=b':'):
     octets = str(len(bstr)).encode("latin-1")
     return octets + joiner + bstr
+
 
 def syrup_encode(obj):
     # Bytes are like <bytes-len>:<bytes>
@@ -114,14 +126,17 @@ def syrup_encode(obj):
     else:
         raise SyrupEncodeError("Unsupported type: %r" % obj)
 
+
 def peek_byte(f):
     orig_pos = f.tell()
     byte = f.read(1)
     f.seek(orig_pos)
     return byte
 
+
 whitespace_chars = string.whitespace.encode("latin-1")
 digit_chars = string.digits.encode("latin-1")
+
 
 def syrup_read(f, convert_singles=False):
     def _syrup_read(f):
@@ -243,6 +258,7 @@ def syrup_read(f, convert_singles=False):
         raise SyrupEncodeError(
             "Unexpected character and position %s: %s" %
             (f.tell(), next_char))
-        
+
+
 def syrup_decode(bstr, convert_singles=False):
     return syrup_read(io.BytesIO(bstr), convert_singles=convert_singles)

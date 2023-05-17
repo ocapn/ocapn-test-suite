@@ -1,19 +1,18 @@
-## Copyright 2023 Jessica Tallon
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-##     http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
+# Copyright 2023 Jessica Tallon
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import tempfile
-import sys
 import socket
 import os
 
@@ -32,7 +31,7 @@ class Socks5Proxy(CapTPSocket):
     def __init__(self, unix_socket_path):
         self._unix_socket_path = unix_socket_path
         super().__init__(socket.AF_UNIX, socket.SOCK_STREAM)
-    
+
     def __del__(self):
         self.close()
         super().__del__()
@@ -48,7 +47,7 @@ class Socks5Proxy(CapTPSocket):
         auth_method = self.recv(1)
         if auth_method != b"\x00":
             raise Exception(f"Unsupported authentication method: {auth_method}")
-    
+
     def _error_number_to_string(self, error_number) -> str | None:
         if error_number == b"\x00":
             return None
@@ -112,6 +111,7 @@ class Socks5Proxy(CapTPSocket):
         # Finally, read the port
         self.recv(2)
 
+
 class OnionNetlayer(Netlayer):
     PORT = 9045
 
@@ -126,7 +126,7 @@ class OnionNetlayer(Netlayer):
 
         # Start a Tor process
         self._tor_process = stem.process.launch_tor_with_config(
-            config = {
+            config={
                 "SocksPort": f"unix:{self._unix_socket_path}",
                 "ControlPort": f"unix:{control_socket_path}",
                 "DataDirectory": data_dir_path,
@@ -134,13 +134,15 @@ class OnionNetlayer(Netlayer):
         )
 
         # We have to setup a hidden service for them to connect to us
-        self._control_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self._control_socket = socket.socket(
+            socket.AF_UNIX, socket.SOCK_STREAM
+        )
         self._control_socket.connect(control_socket_path)
         self._incoming_control_socket, self.location = self._add_hidden_service()
-    
+
     def __del__(self):
         self.shutdown()
-    
+
     def connect(self, ocapn_machine: OCapNMachine) -> CapTPSocket:
         """ Connect to the remote machine """
         # Finally setup a socket and connect to the CapTP server
@@ -151,7 +153,7 @@ class OnionNetlayer(Netlayer):
         connection = CapTPSocket.from_socket(onion_sock)
         self._connections.append(connection)
         return connection
-        
+
     def accept(self) -> CapTPSocket:
         """ Blocks until a CapTP connection is received, returning the socket """
         sock, addr = self._incoming_control_socket.accept()
@@ -164,7 +166,7 @@ class OnionNetlayer(Netlayer):
         data = socket.recv(len(expected))
         if data != expected:
             raise Exception(f"Unexpected response from socket. Read {data}, but expected: {expected}")
-    
+
     def _read_until_newline(self, socket) -> bytes:
         """ Read from a socket until we get a newline """
         data = bytearray()
@@ -182,7 +184,6 @@ class OnionNetlayer(Netlayer):
         self._control_socket.sendall(b"AUTHENTICATE\r\n")
         self._read_and_expect(self._control_socket, b"250 OK\r\n")
 
-
         ocapn_sock_path = os.path.join(self._temp_dir.name, "ocapn.sock")
         self._control_socket.sendall(
             f"ADD_ONION NEW:ED25519-V3 PORT={self.PORT},unix:{ocapn_sock_path}\r\n"
@@ -190,13 +191,15 @@ class OnionNetlayer(Netlayer):
         )
 
         # Read the ServiceID
-        service_id = self._read_until_newline(self._control_socket).decode("ascii")
+        service_id = self._read_until_newline(self._control_socket)
+        service_id = service_id.decode("ascii")
         if not service_id.startswith("250-ServiceID="):
             raise Exception(f"Unexpected response from socket: {service_id}")
         service_id = service_id[14:].strip()
 
         # Read the PrivateKey
-        private_key = self._read_until_newline(self._control_socket).decode("ascii")
+        private_key = self._read_until_newline(self._control_socket)
+        private_key = private_key.decode("ascii")
         if not private_key.startswith("250-PrivateKey="):
             raise Exception(f"Unexpected response from socket: {private_key}")
         private_key = private_key[15:].strip()
@@ -211,7 +214,7 @@ class OnionNetlayer(Netlayer):
         ocapn_machine = OCapNMachine(syrup.Symbol("onion"), service_id, False)
 
         return incoming_control_socket, ocapn_machine
-    
+
     def shutdown(self):
         """ Shuts down the netlayer """
         for connection in self._connections:
@@ -226,6 +229,6 @@ class OnionNetlayer(Netlayer):
         if getattr(self, "_control_socket", None) is not None:
             self._control_socket.close()
             self._control_socket = None
-        
+
         if getattr(self, "_incoming_control_socket", None) is not None:
             self._temp_dir.cleanup()
