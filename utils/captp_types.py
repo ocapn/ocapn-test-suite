@@ -278,6 +278,7 @@ class OpStartSession(CapTPType):
              self.location.to_syrup_record(), encoded_location_sig]
         )
 
+
 class OpBootstrap(CapTPType):
     """ <op:bootstrap answer-position resolve-me-desc> """
 

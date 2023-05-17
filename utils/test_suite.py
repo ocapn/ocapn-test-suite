@@ -48,6 +48,7 @@ class CapTPTestRunner(unittest.TextTestRunner):
             return loader.loadTestsFromName(test_module)
         return loader.discover("tests", pattern="*.py")
 
+
 class CapTPTestCase(unittest.TestCase, Crypto):
     """ Base class for all CapTP tests """
 
@@ -56,6 +57,8 @@ class CapTPTestCase(unittest.TestCase, Crypto):
         self.netlayer = netlayer
         self.ocapn_uri = ocapn_uri
         self.remote = None
+        self._next_answer_pos = 0
+        self._next_import_object_pos = 0
 
     def setUp(self) -> None:
         self.remote = self.netlayer.connect(self.ocapn_uri)
@@ -65,40 +68,6 @@ class CapTPTestCase(unittest.TestCase, Crypto):
         if self.remote is not None:
             self.remote.close()
         return super().tearDown()
-
-
-class CompleteCapTPTestCase(CapTPTestCase):
-    """ Sets up a CapTP session for each test case """
-
-    def __init__(self, netlayer, ocapn_uri, *args, **kwargs):
-        super().__init__(netlayer, ocapn_uri, *args, **kwargs)
-        self._next_answer_pos = 0
-        self._next_object_pos = 0
-        self._bootstrap_object = None
-
-    def setUp(self) -> None:
-        super().setUp()
-
-        # Get their `op:start-session` message
-        remote_start_session = self.remote.receive_message()
-        assert isinstance(remote_start_session, OpStartSession)
-
-        pubkey, privkey = self._generate_key()
-        location = self.netlayer.location
-
-        # Create the signature.
-        my_location = Record(
-            label=Symbol("my-location"),
-            args=[location.to_syrup_record()]
-        )
-        location_sig = privkey.sign(syrup_encode(my_location))
-        start_session_op = OpStartSession(
-            remote_start_session.captp_version,
-            pubkey,
-            location,
-            location_sig
-        )
-        self.remote.send_message(start_session_op)
 
     @property
     def _next_import_object(self) -> DescImportObject:
@@ -113,43 +82,6 @@ class CompleteCapTPTestCase(CapTPTestCase):
         position = self._next_answer_pos
         self._next_answer_pos += 1
         return DescAnswer(position)
-    
-    def get_bootstrap_object(self, pipeline=False) -> DescAnswer | DescExport:
-        """" Gets the bootstrap object from the remote session """
-        if self._bootstrap_object is not None:
-            return self._bootstrap_object
-
-        bootstrap_op = OpBootstrap(self._next_answer.position, self._next_import_object)
-        self.remote.send_message(bootstrap_op)
-        if pipeline:
-            return DescAnswer(bootstrap_op.answer_position)
-        
-        export_desc = bootstrap_op.resolve_me_desc.to_desc_export()
-        message = self._expect_message_to(export_desc)
-        assert message.args[0] == Symbol("fulfill")
-        assert isinstance(message.args[1], DescImportObject)
-        self._bootstrap_object = message.args[1].to_desc_export()
-        return self._bootstrap_object
-
-    def _fetch_object(self, swiss_num, pipeline=False) -> DescExport:
-        """ Fetches an object from the remote bootstrap object """
-        bootstrap_object = self.get_bootstrap_object(pipeline=pipeline)
-        fetch_msg = OpDeliver(
-            to=bootstrap_object,
-            args=[Symbol("fetch"), swiss_num],
-            answer_position=self._next_answer_pos if pipeline else False,
-            resolve_me_desc=self._next_import_object
-        )
-        self.remote.send_message(fetch_msg)
-        if pipeline:
-            self._next_answer_pos += 1
-            return fetch_msg.vow
-        
-        response = self._expect_promise_resolution(fetch_msg.exported_resolve_me_desc)
-        assert response.args[0] == Symbol("fulfill")
-        fetched_object = response.args[1]
-        assert isinstance(fetched_object, DescImportObject)
-        return fetched_object.to_desc_export()
 
     def _expect_message_to(self, recipient: DescExport, timeout=60) -> OpDeliver | OpDeliverOnly | None:
         """ Reads messages until one is sent to the given recipient """
@@ -197,5 +129,72 @@ class CompleteCapTPTestCase(CapTPTestCase):
                 continue
 
             return message
-                
 
+
+class CompleteCapTPTestCase(CapTPTestCase):
+    """ Sets up a CapTP session for each test case """
+
+    def __init__(self, netlayer, ocapn_uri, *args, **kwargs):
+        super().__init__(netlayer, ocapn_uri, *args, **kwargs)
+        self._bootstrap_object = None
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        # Get their `op:start-session` message
+        remote_start_session = self.remote.receive_message()
+        assert isinstance(remote_start_session, OpStartSession)
+
+        pubkey, privkey = self._generate_key()
+        location = self.netlayer.location
+
+        # Create the signature.
+        my_location = Record(
+            label=Symbol("my-location"),
+            args=[location.to_syrup_record()]
+        )
+        location_sig = privkey.sign(syrup_encode(my_location))
+        start_session_op = OpStartSession(
+            remote_start_session.captp_version,
+            pubkey,
+            location,
+            location_sig
+        )
+        self.remote.send_message(start_session_op)
+    
+    def get_bootstrap_object(self, pipeline=False) -> DescAnswer | DescExport:
+        """" Gets the bootstrap object from the remote session """
+        if self._bootstrap_object is not None:
+            return self._bootstrap_object
+
+        bootstrap_op = OpBootstrap(self._next_answer.position, self._next_import_object)
+        self.remote.send_message(bootstrap_op)
+        if pipeline:
+            return DescAnswer(bootstrap_op.answer_position)
+        
+        export_desc = bootstrap_op.resolve_me_desc.to_desc_export()
+        message = self._expect_message_to(export_desc)
+        assert message.args[0] == Symbol("fulfill")
+        assert isinstance(message.args[1], DescImportObject)
+        self._bootstrap_object = message.args[1].to_desc_export()
+        return self._bootstrap_object
+
+    def _fetch_object(self, swiss_num, pipeline=False) -> DescExport:
+        """ Fetches an object from the remote bootstrap object """
+        bootstrap_object = self.get_bootstrap_object(pipeline=pipeline)
+        fetch_msg = OpDeliver(
+            to=bootstrap_object,
+            args=[Symbol("fetch"), swiss_num],
+            answer_position=self._next_answer_pos if pipeline else False,
+            resolve_me_desc=self._next_import_object
+        )
+        self.remote.send_message(fetch_msg)
+        if pipeline:
+            self._next_answer_pos += 1
+            return fetch_msg.vow
+        
+        response = self._expect_promise_resolution(fetch_msg.exported_resolve_me_desc)
+        assert response.args[0] == Symbol("fulfill")
+        fetched_object = response.args[1]
+        assert isinstance(fetched_object, DescImportObject)
+        return fetched_object.to_desc_export()

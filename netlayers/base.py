@@ -40,7 +40,7 @@ class ReadSocketIO:
         # We need to read more data from the socket
         data = self._socket.recv(size - amount_read_ahead)
         if len(data) == 0:
-            raise Exception("Socket closed")
+            raise ConnectionAbortedError("Socket closed")
         self._buffer += data
         self._seek_position += len(data)
         return data
