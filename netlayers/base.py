@@ -11,10 +11,12 @@
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
+from abc import ABC, abstractmethod
 import socket
-import time
 
 from contrib import syrup
+from utils.captp_types import CapTPType, decode_captp_message
+from utils.ocapn_uris import OCapNMachine
 
 class ReadSocketIO:
     """ Wrapper around a socket which allows us to read from it like a file """
@@ -59,12 +61,41 @@ class ReadSocketIO:
         return self._seek_position
 
 class CapTPSocket(socket.socket):
+
+    def __del__(self):
+        self.close()
+
+    @classmethod
+    def from_socket(cls, socket):
+        """ Creates a CapTPSocket from a socket
+        
+        Important: This will detach the socket from the original socket object,
+        do not continue to use the original socket object after calling this.
+        """
+        captp_socket = cls(fileno=socket.fileno())
+        captp_socket.settimeout(socket.gettimeout())
+        socket.detach()
+        return captp_socket
+
     def send_message(self, message):
-        """ Send data to the remote machine """        
+        """ Send data to the remote machine """      
+        if isinstance(message, CapTPType):
+            message = message.to_syrup_record()
         encoded_message = syrup.syrup_encode(message)
         self.sendall(encoded_message)
 
-    def receive_message(self, timeout=60):
+    def receive_message(self, timeout=120) -> CapTPType:
         """ Receive data from the remote machine """
         socketio = ReadSocketIO(self, timeout=timeout)
-        return syrup.syrup_read(socketio)
+        encoded_message = syrup.syrup_read(socketio)
+        assert isinstance(encoded_message, syrup.Record)
+        return decode_captp_message(encoded_message)
+
+class Netlayer(ABC):
+    """ Base class for all netlayers """
+
+    @abstractmethod
+    def connect(self, ocapn_machine: OCapNMachine) -> CapTPSocket:
+        """ Connect to a remote machine returning a connection """
+        pass
+        

@@ -16,17 +16,18 @@ import argparse
 import unittest
 import sys
 
-from utils.locators import Locator
+from contrib.syrup import Symbol
+from utils.ocapn_uris import OCapNMachine
 from utils.test_suite import CapTPTestRunner
 from netlayers.onion import OnionNetlayer
 
 
-def setup_netlayer(locator):
-    """ Setup the netlayer for the provided locator """
-    if locator.transport == "onion":
-        return OnionNetlayer(locator)
+def setup_netlayer(ocapn_machine):
+    """ Setup the netlayer for the provided OCapN machine """
+    if ocapn_machine.transport == Symbol("onion"):
+        return OnionNetlayer()
     else:
-        raise ValueError(f"Unsupported transport layer: {locator.transport}")
+        raise ValueError(f"Unsupported transport layer: {ocapn_machine.transport}")
 
 if __name__ == "__main__":
     # Support a command line argument which MUST be provided to run the tests
@@ -44,17 +45,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Parse and validate the address
-    locator = Locator(args.locator)
-    if not locator.validate():
-        print(f"OCapN machine location is invalid: {locator}")
-        sys.exit(1)
+    ocapn_machine_uri = OCapNMachine.from_uri(args.locator)
 
     try:
-        netlayer = setup_netlayer(locator)
+        netlayer = setup_netlayer(ocapn_machine_uri)
     except ImportError as e:
         print(f"Unable to setup netlayer: {e}")
         sys.exit(1)
 
-    runner = CapTPTestRunner(netlayer)
+    runner = CapTPTestRunner(netlayer, ocapn_machine_uri)
     suite = runner.loadTests(args.test_module)
     runner.run(suite)

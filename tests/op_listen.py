@@ -14,120 +14,113 @@
 
 import unittest
 
+from typing import Tuple
+
 from contrib.syrup import Record, Symbol, syrup_encode
 from utils.test_suite import CompleteCapTPTestCase
+from utils.captp_types import *
 
-class OpListen(CompleteCapTPTestCase):
+class OpListenTest(CompleteCapTPTestCase):
     """ `op:listen` - Request notification on a promise """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._promise_resolver = None
+        self._promise_resolver_refr = None
 
     @property
     def promise_resolver_refr(self):
         """ The promise resolver object which provides a promise and resolver """
-        return self._fetch_object(b"IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr")
+        if self._promise_resolver_refr is None:
+            self._promise_resolver_refr = self._fetch_object(b"IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr")
+        return self._promise_resolver_refr
     
-    def make_promise_resolver_pair(self):
+    def make_promise_resolver_pair(self) -> Tuple[DescImportObject, DescImportObject]:
         """ Returns a promise and resolver pair """
-        resolve_me_desc = self._next_import_object
-        get_promise_pair_msg = Record(
-            Symbol("op:deliver"),
-            [
-                self.promise_resolver_refr,
-                [],
-                False,
-                resolve_me_desc
-            ]
+        deliver_op = OpDeliver(
+            to=self.promise_resolver_refr,
+            args=[],
+            answer_position=False,
+            resolve_me_desc=self._next_import_object
         )
-        self.netlayer.send_message(get_promise_pair_msg)
-        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
-        response = self._expect_promise_resolution(exported_resolve_me_desc)
-        return response.args[1][1]
-
-    def make_listen_msg(self, on: Record, wants_partial=False):
-        resolve_me_desc = self._next_import_object
-        listen_op = Record(
-            Symbol("op:listen"),
-            [on, resolve_me_desc, False]
-        )
-        return listen_op, resolve_me_desc
+        self.remote.send_message(deliver_op)
+        response = self._expect_promise_resolution(deliver_op.exported_resolve_me_desc)
+        vow, resolver = response.args[1]
+        return vow, resolver
 
     def test_op_listen_to_promise_and_fulfill(self):
         """ Notified when a promise is fulfilled """
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
-        vow_refr = self._import_object_to_export(vow)
-        resolver_refr = self._import_object_to_export(resolver)
 
         # Now lets listen on the promise
-        listen_op, resolve_me_desc = self.make_listen_msg(vow_refr)
-        self.netlayer.send_message(listen_op)
+        listen_op = OpListen(
+            to=vow.to_desc_export(),
+            resolve_me_desc=self._next_import_object,
+            wants_partial=False,
+        )
+        self.remote.send_message(listen_op)
 
         # Resolve the promise
         resolved_promise_with = Symbol("ok")
-        resolve_msg = Record(
-            Symbol("op:deliver-only"),
-            [resolver_refr, [Symbol("fulfill"), resolved_promise_with]]
+        resolve_msg = OpDeliverOnly(
+            to=resolver.to_desc_export(),
+            args=[Symbol("fulfill"), resolved_promise_with]
         )
-        self.netlayer.send_message(resolve_msg)
+        self.remote.send_message(resolve_msg)
 
         # Check we get a resolution to our object.
-        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
-        response = self._expect_promise_resolution(exported_resolve_me_desc)
-        self.assertEqual(response.args[1][0], Symbol("fulfill"))
-        self.assertEqual(response.args[1][1], resolved_promise_with)
+        response = self._expect_promise_resolution(listen_op.exported_resolve_me_desc)
+        self.assertEqual(response.args, [Symbol("fulfill"), resolved_promise_with])
     
     def test_op_listen_to_promise_and_break(self):
         """ Notified when a promise is broken """
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
-        vow_refr = self._import_object_to_export(vow)
-        resolver_refr = self._import_object_to_export(resolver)
 
         # Now lets listen on the promise
-        listen_op, resolve_me_desc = self.make_listen_msg(vow_refr)
-        self.netlayer.send_message(listen_op)
+        listen_op = OpListen(
+            to=vow.to_desc_export(),
+            resolve_me_desc=self._next_import_object,
+            wants_partial=False,
+        )
+        self.remote.send_message(listen_op)
 
         # Break the promise
         err_symbol = Symbol("oh-no")
-        break_msg = Record(
-            Symbol("op:deliver-only"),
-            [resolver_refr, [Symbol("break"), err_symbol]]
+        break_msg = OpDeliverOnly(
+            to=resolver.to_desc_export(),
+            args=[Symbol("break"), err_symbol]
         )
-        self.netlayer.send_message(break_msg)
+        self.remote.send_message(break_msg)
 
         # Check we get a resolution to our object.
-        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
-        response = self._expect_promise_resolution(exported_resolve_me_desc)
-        self.assertEqual(response.args[1][0], Symbol("break"))
-        self.assertEqual(response.args[1][1], err_symbol)
+        response = self._expect_promise_resolution(listen_op.exported_resolve_me_desc)
+        self.assertEqual(response.args, [Symbol("break"), err_symbol])
 
     def test_op_listen_already_has_answer(self):
         """ Notified when listening on a resolved promise """
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
-        vow_refr = self._import_object_to_export(vow)
-        resolver_refr = self._import_object_to_export(resolver)
 
         # Lets resolve the promise
         resolved_promise_with = Symbol("ok")
-        resolve_msg = Record(
-            Symbol("op:deliver-only"),
-            [resolver_refr, [Symbol("fulfill"), resolved_promise_with]]
+        resolve_msg = OpDeliverOnly(
+            to=resolver.to_desc_export(),
+            args=[Symbol("fulfill"), resolved_promise_with]
         )
-        self.netlayer.send_message(resolve_msg)
+        self.remote.send_message(resolve_msg)
 
         # Now lets listen on the promise
-        listen_op, resolve_me_desc = self.make_listen_msg(vow_refr)
-        self.netlayer.send_message(listen_op)
+        listen_op = OpListen(
+            to=vow.to_desc_export(),
+            resolve_me_desc=self._next_import_object,
+            wants_partial=False,
+        )
+        self.remote.send_message(listen_op)
 
         # Check we get a resolution to our object.
-        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
-        response = self._expect_promise_resolution(exported_resolve_me_desc)
-        self.assertEqual(response.args[1][0], Symbol("fulfill"))
-        self.assertEqual(response.args[1][1], resolved_promise_with)
+        response = self._expect_promise_resolution(listen_op.exported_resolve_me_desc)
+        self.assertEqual(response.args, [Symbol("fulfill"), resolved_promise_with])
     
     def disabled_test_op_listen_on_answer(self):
         """ Notified when listening on a desc:answer """

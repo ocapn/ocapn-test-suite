@@ -16,72 +16,61 @@ import unittest
 
 from contrib.syrup import Record, Symbol, syrup_encode
 from utils.test_suite import CapTPTestCase
+from utils.captp_types import OpStartSession, OpAbort
 
-class OPStartSession(CapTPTestCase):
+class OpStartSessionTest(CapTPTestCase):
     """ `op:start-session` - used to begin the CapTP session """
 
     def test_captp_remote_version(self):
         """ Remote CapTP session sends a valid `op:start-session` """
-        op = self.netlayer.receive_message()
-        self.assertEqual(op.label, Symbol("op:start-session"))
-        self.assertEqual(len(op.args), 4)
+        message = self.remote.receive_message()
+        self.assertIsInstance(message, OpStartSession)
 
-        captp_version, encoded_pubkey, encoded_location, encoded_location_sig = op.args
         # TODO: Enable when the spec transitions from drafts to published.
-        #self.assertEqual(captp_version, "1")
-        pubkey = self._captp_to_key_pair(encoded_pubkey)
-        location_sig = self._captp_to_signature(encoded_location_sig)
-
-        # Wrap the location in the my-location record
-        location = Record(label=Symbol("my-location"), args=(encoded_location,))
-
-        # This raises an exception if the signature is invalid
-        self.assertIsNone(pubkey.verify(location_sig, syrup_encode(location)))
+        #self.assertEqual(message.captp_version, "1")
+        self.assertTrue(message.valid)
     
     def test_start_session_with_invalid_version(self):
-        """ Remote CapTP session aborts upon invalid version """
+        """ Remote CapTP session aborts upon invalid version """        
         # First wait for their `op:start-session` message.
-        self.netlayer.receive_message()
+        remote_start_session = self.remote.receive_message()
+        self.assertIsInstance(remote_start_session, OpStartSession)
+
 
         # Then send our own `op:start-session` message with an invalid version.
         pubkey, privkey = self._generate_key()
         location = self.netlayer.location
-        location_sig = privkey.sign(syrup_encode(location))
-        start_session_op = Record(
-            label=Symbol("op:start-session"),
-            args=[
-                "invalid-version-number",
-                self._key_pair_to_captp(pubkey),
-                location,
-                self._signature_to_captp(location_sig)
-            ]
+        location_sig = privkey.sign(syrup_encode(location.to_syrup_record()))
+        start_session_op = OpStartSession(
+            "invalid-version-number",
+            pubkey,
+            location,
+            location_sig
         )
-        self.netlayer.send_message(start_session_op)
+        self.remote.send_message(start_session_op)
 
         # We should receive an abort message from the remote.
-        expected_abort = self.netlayer.receive_message()
-        self.assertEqual(expected_abort.label, Symbol("op:abort"))
+        expected_abort = self.remote.receive_message()
+        self.assertIsInstance(expected_abort, OpAbort)
     
     def test_start_session_with_invalid_signature(self):
         """ Remote CapTP session aborts upon invalid location signature """
         # First wait for their `op:start-session` message.
-        remote_start_session = self.netlayer.receive_message()
+        remote_start_session = self.remote.receive_message()
+        self.assertIsInstance(remote_start_session, OpStartSession)
 
         # Then send our own `op:start-session` message with an invalid signature.
         pubkey, privkey = self._generate_key()
         location = self.netlayer.location
         invalid_location_sig = privkey.sign(b"i am invalid")
-        start_session_op = Record(
-            label=Symbol("op:start-session"),
-            args=[
-                remote_start_session.args[0],
-                self._key_pair_to_captp(pubkey),
-                location,
-                self._signature_to_captp(invalid_location_sig)
-            ]
+        start_session_op = OpStartSession(
+            remote_start_session.captp_version,
+            pubkey,
+            location,
+            invalid_location_sig
         )
-        self.netlayer.send_message(start_session_op)
+        self.remote.send_message(start_session_op)
 
         # We should receive an abort message from the remote.
-        expected_abort = self.netlayer.receive_message()
-        self.assertEqual(expected_abort.label, Symbol("op:abort"))
+        expected_abort = self.remote.receive_message()
+        self.assertIsInstance(expected_abort, OpAbort)

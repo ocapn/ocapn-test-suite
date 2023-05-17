@@ -49,20 +49,6 @@ class Crypto:
             ]
         ]
     
-    def _signature_to_captp(self, signature) -> bytes:
-        """ Converts a signature to the CapTP format """
-        # Convert to: (sig-val (eddsa (r ,r) (s ,s)))
-        r = signature[0:32]
-        s = signature[32:]
-        return [
-            Symbol("sig-val"),
-            [
-                Symbol("eddsa"),
-                [Symbol("r"), r],
-                [Symbol("s"), s],
-            ]
-        ]
-    
     def _captp_to_key_pair(self, captp_key_pair) -> Ed25519PublicKey:
         """ Converts a CapTP key pair to the cryptography library format """
         # Convert from: (public-key (ecc (curve Ed25519) (flags eddsa) (q ,data)))

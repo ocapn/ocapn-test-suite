@@ -16,30 +16,20 @@ import unittest
 
 from contrib.syrup import Record, Symbol, syrup_encode
 from utils.test_suite import CompleteCapTPTestCase
+from utils.captp_types import OpBootstrap, OpDeliver, OpDeliverOnly, DescImportObject
 
-class OpBootstrap(CompleteCapTPTestCase):
+class OpBootstrapTest(CompleteCapTPTestCase):
     """ `op:bootstrap` - fetching the bootstrap object """
 
     def test_op_bootstrap(self):
         """ Check we can fetch the bootstrap object """
-        # Get an import-object for the resolve-me-desc and send a bootstrap
-        # object asking for it to be available at answer position `0`.
-        resolve_me_desc = self._next_import_object
-        bootstrap_op = Record(
-            Symbol("op:bootstrap"),
-            [0, resolve_me_desc]
-        )
-        self.netlayer.send_message(bootstrap_op)
+        bootstrap_op = OpBootstrap(0, self._next_import_object)
+        self.remote.send_message(bootstrap_op)
 
         # Wait for a message to the resolve-me-desc we specified.
-        exported_resolve_me_desc = self._import_object_to_export(resolve_me_desc)
-        response = self._expect_message_to(exported_resolve_me_desc)
-        if not isinstance(response, Record):
-            raise Exception("op:bootstrap promise was never fulfilled")
+        response = self._expect_message_to(bootstrap_op.exported_resolve_me_desc)
+        self.assertIsInstance(response, (OpDeliver, OpDeliverOnly))
 
         # Check it's fulfilling the promise with a `desc:import-object`.
-        message_args = response.args[1]
-        self.assertEqual(message_args[0], Symbol("fulfill"))
-        self.assertTrue(isinstance(message_args[1], Record))
-        self.assertEqual(message_args[1].label, Symbol("desc:import-object"))
-        self.assertEqual(type(message_args[1].args[0]), int)
+        self.assertEqual(response.args[0], Symbol("fulfill"))
+        self.assertIsInstance(response.args[1], DescImportObject)

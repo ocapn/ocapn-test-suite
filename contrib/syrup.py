@@ -41,6 +41,9 @@ class Symbol:
     def __repr__(self):
         return "Symbol(%s)" % self.name
     
+    def __str__(self):
+        return self.name
+    
     def __hash__(self) -> int:
         return hash(self.name)
     
