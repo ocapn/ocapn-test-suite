@@ -13,20 +13,22 @@
 # limitations under the License.
 
 from contrib.syrup import Symbol
-from utils.test_suite import CompleteCapTPTestCase
+from utils.test_suite import CapTPTestCase
 from utils.captp_types import OpBootstrap, OpDeliver, OpDeliverOnly, DescImportObject
 
 
-class OpBootstrapTest(CompleteCapTPTestCase):
+class OpBootstrapTest(CapTPTestCase):
     """ `op:bootstrap` - fetching the bootstrap object """
 
     def test_op_bootstrap(self):
         """ Check we can fetch the bootstrap object """
-        bootstrap_op = OpBootstrap(0, self._next_import_object)
+        self.remote.setup_session()
+
+        bootstrap_op = OpBootstrap(0, self.remote.next_import_object)
         self.remote.send_message(bootstrap_op)
 
         # Wait for a message to the resolve-me-desc we specified.
-        response = self._expect_message_to(bootstrap_op.exported_resolve_me_desc)
+        response = self.remote.expect_message_to(bootstrap_op.exported_resolve_me_desc)
         self.assertIsInstance(response, (OpDeliver, OpDeliverOnly))
 
         # Check it's fulfilling the promise with a `desc:import-object`.

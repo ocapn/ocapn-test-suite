@@ -15,9 +15,10 @@
 from contrib.syrup import syrup_encode
 from utils.test_suite import CapTPTestCase
 from utils.captp_types import OpStartSession, OpAbort
+from utils.cryptography import Crypto
 
 
-class OpStartSessionTest(CapTPTestCase):
+class OpStartSessionTest(CapTPTestCase, Crypto):
     """ `op:start-session` - used to begin the CapTP session """
 
     def test_captp_remote_version(self):
