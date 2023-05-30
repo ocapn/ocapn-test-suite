@@ -14,11 +14,11 @@
 
 from contrib.syrup import syrup_encode
 from utils.test_suite import CapTPTestCase
-from utils.captp_types import OpStartSession, OpAbort
-from utils.cryptography import Crypto
+from utils.captp_types import OpStartSession, OpAbort, CapTPPublicKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
-class OpStartSessionTest(CapTPTestCase, Crypto):
+class OpStartSessionTest(CapTPTestCase):
     """ `op:start-session` - used to begin the CapTP session """
 
     def test_captp_remote_version(self):
@@ -37,12 +37,13 @@ class OpStartSessionTest(CapTPTestCase, Crypto):
         self.assertIsInstance(remote_start_session, OpStartSession)
 
         # Then send our own `op:start-session` message with an invalid version.
-        pubkey, privkey = self._generate_key()
+        private_key = Ed25519PrivateKey.generate()
+        public_key = CapTPPublicKey.from_private_key(private_key)
         location = self.netlayer.location
-        location_sig = privkey.sign(syrup_encode(location.to_syrup_record()))
+        location_sig = private_key.sign(syrup_encode(location.to_syrup()))
         start_session_op = OpStartSession(
             "invalid-version-number",
-            pubkey,
+            public_key,
             location,
             location_sig
         )
@@ -59,12 +60,13 @@ class OpStartSessionTest(CapTPTestCase, Crypto):
         self.assertIsInstance(remote_start_session, OpStartSession)
 
         # Then send our own `op:start-session` message with an invalid signature.
-        pubkey, privkey = self._generate_key()
+        private_key = Ed25519PrivateKey.generate()
+        public_key = CapTPPublicKey.from_private_key(private_key)
         location = self.netlayer.location
-        invalid_location_sig = privkey.sign(b"i am invalid")
+        invalid_location_sig = private_key.sign(b"i am invalid")
         start_session_op = OpStartSession(
             remote_start_session.captp_version,
-            pubkey,
+            public_key,
             location,
             invalid_location_sig
         )

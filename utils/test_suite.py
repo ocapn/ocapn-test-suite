@@ -15,8 +15,6 @@
 import unittest
 
 from utils.captp import CapTPSession
-from utils.cryptography import Crypto
-
 
 class CapTPTestLoader(unittest.loader.TestLoader):
     """ Custom loader which provides the netlayer when constructing the test cases """
@@ -48,7 +46,7 @@ class CapTPTestRunner(unittest.TextTestRunner):
         return loader.discover("tests", pattern="*.py")
 
 
-class CapTPTestCase(unittest.TestCase, Crypto):
+class CapTPTestCase(unittest.TestCase):
     """ Base class for all CapTP tests """
 
     def __init__(self, netlayer, ocapn_uri, *args, **kwargs):

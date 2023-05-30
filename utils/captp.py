@@ -12,45 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import time
+import hashlib
 
 from contrib.syrup import Symbol, Record, syrup_encode
 from utils import captp_types
-from utils.cryptography import Crypto
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
-class CapTPSession(Crypto):
+class CapTPSession:
     """ Representation of a CapTP session for testing purposes """
 
     def __init__(self, connection, location):
         self.connection = connection
         self.location = location
-        self._imports = {}
-        self._exports = {}
-        self._gifts = {}
         self._bootstrap_object = None
+        self.public_key = None
+        self.private_key = None
+        self.remote_public_key = None
 
         self._next_import_position = 0
         self._next_answer_position = 0
+        self._next_handoff_count = 0
+
+        self.remote_seen_handoff_counts = set()
 
     def setup_session(self):
         """ Sets up the session by sending a `op:start-sesion` and verifying theirs """
         # Get their `op:start-session` message
         remote_start_session = self.receive_message()
         assert isinstance(remote_start_session, captp_types.OpStartSession)
+        self.remote_public_key = remote_start_session.session_pubkey
 
-        pubkey, privkey = self._generate_key()
-        location = self.location
+        self.private_key = Ed25519PrivateKey.generate()
+        self.public_key = captp_types.CapTPPublicKey.from_private_key(self.private_key)
 
         # Create the signature.
         my_location = Record(
             label=Symbol("my-location"),
-            args=[location.to_syrup_record()]
+            args=[self.location.to_syrup()]
         )
-        location_sig = privkey.sign(syrup_encode(my_location))
+        location_sig = self.private_key.sign(syrup_encode(my_location))
         start_session_op = captp_types.OpStartSession(
             remote_start_session.captp_version,
-            pubkey,
-            location,
+            self.public_key,
+            self.location,
             location_sig
         )
         self.send_message(start_session_op)
@@ -58,9 +63,6 @@ class CapTPSession(Crypto):
     def close(self):
         """ Aborts the connection and closes the socket """
         self.send_message(captp_types.OpAbort("shutdown"))
-        self._imports = {}
-        self._exports = {}
-        self._gifts = {}
         self._bootstrap_object = None
         self.connection.close()
 
@@ -70,7 +72,56 @@ class CapTPSession(Crypto):
 
     def receive_message(self, timeout=60):
         """ Receive a message from the remote """
-        return self.connection.receive_message(timeout=timeout)
+        msg = self.connection.receive_message(timeout=timeout)
+
+        # Find out if the message is a deliver which may contain a handoff receive
+        # If it is, we should keep track of the handoff counts we've seen so far.
+        if not isinstance(msg, captp_types.OpDeliver):
+            return msg
+
+        for arg in msg.args:
+            if not isinstance(arg, captp_types.DescSigEnvelope):
+                continue
+            if not isinstance(arg.object, captp_types.DescHandoffReceive):
+                continue
+
+            # Found one.
+            handoff_receive = arg.object
+            if handoff_receive.handoff_count in self.remote_seen_handoff_counts:
+                raise Exception("Received a handoff count we've already seen")
+            self.remote_seen_handoff_counts.add(handoff_receive.handoff_count)
+
+        return msg
+
+    @property
+    def id(self):
+        """ The session ID is a unique identifier for the session derived from each parties session keys """
+        # 1. SHA256 hash of the Syrup serialized session-key of both sides
+        our_encoded_pubkey = syrup_encode(self.public_key.to_syrup())
+        our_hashed_pubkey = hashlib.sha256(our_encoded_pubkey).digest()
+
+        their_encoded_pubkey = syrup_encode(self.remote_public_key.to_syrup())
+        their_hashed_pubkey = hashlib.sha256(their_encoded_pubkey).digest()
+
+        # 2. SHA256 hash of the hashed session-keys in step 1.
+        our_hashed_pubkey = hashlib.sha256(our_hashed_pubkey).digest()
+        their_hashed_pubkey = hashlib.sha256(their_hashed_pubkey).digest()
+
+        # 3. Sort them based on the resulting octets
+        keys = [our_hashed_pubkey, their_hashed_pubkey]
+        keys.sort()
+
+        # 4. Concatinating them in the order from number 3
+        session_id_hash = keys[0] + keys[1]
+
+        # 5. Append the string "prot0" to the beginning
+        session_id_hash = b"prot0" + session_id_hash
+
+        # 6. SHA256 hash the resulting string, this is the `session-ID`
+        hashed_session_id = hashlib.sha256(session_id_hash).digest()
+
+        # 7. SHA256 hash of the result produced in step 6.
+        return hashlib.sha256(hashed_session_id).digest()
 
     @property
     def next_import_object(self) -> captp_types.DescImportObject:
@@ -85,6 +136,13 @@ class CapTPSession(Crypto):
         position = self._next_answer_position
         self._next_answer_position += 1
         return captp_types.DescAnswer(position)
+
+    @property
+    def next_handoff_count(self) -> int:
+        """ Returns the next handoff count """
+        count = self._next_handoff_count
+        self._next_handoff_count += 1
+        return count
 
     def get_bootstrap_object(self, pipeline=False):
         """" Gets the bootstrap object from the remote session """
@@ -125,22 +183,30 @@ class CapTPSession(Crypto):
         assert isinstance(fetched_object, captp_types.DescImportObject)
         return fetched_object.to_desc_export()
 
-    def expect_message_to(self, recipient: captp_types.DescExport, timeout=60):
-        """ Reads messages until one is sent to the given recipient """
-
+    def expect_message_type(self, message_type, timeout=60):
+        """ Reads messages until one of the given type is received """
         while timeout >= 0:
             start_time = time.time()
             message = self.receive_message(timeout=timeout)
             end_time = time.time()
             timeout -= end_time - start_time
 
-            # Skip messages which aren't deliver or deliver-only
-            if not isinstance(message, (captp_types.OpDeliver, captp_types.OpDeliverOnly)):
-                continue
-
-            # If the message is to the recipient, return it
-            if message.to == recipient:
+            if isinstance(message, message_type):
                 return message
+
+    def expect_message_to(self, recipients, timeout=60):
+        """ Reads messages until one is sent to the given recipient """
+        if isinstance(recipients, (captp_types.DescAnswer, captp_types.DescExport)):
+            recipients = [recipients]
+
+        while timeout >= 0:
+            message = self.expect_message_type((captp_types.OpDeliver, captp_types.OpDeliverOnly), timeout=timeout)
+
+            # The `recipient` can be a tuple of matches, or a single match
+            # the recipient can also be a DescExport or DescAnswer
+            for recipient in recipients:
+                if message.to == recipient:
+                    return message
 
     def expect_promise_resolution(self, resolve_me_desc: captp_types.DescExport, timeout=60):
         """ Reads until a promise resolves to a non-promise value """

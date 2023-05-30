@@ -23,6 +23,7 @@ from netlayers.base import CapTPSocket, Netlayer
 
 import stem.process
 from utils.ocapn_uris import OCapNMachine
+from utils.captp import CapTPSession
 
 
 class Socks5Proxy(CapTPSocket):
@@ -138,7 +139,7 @@ class OnionNetlayer(Netlayer):
             socket.AF_UNIX, socket.SOCK_STREAM
         )
         self._control_socket.connect(control_socket_path)
-        self._incoming_control_socket, self.location = self._add_hidden_service()
+        self._incoming_control_socket, self.location = self.add_hidden_service()
 
     def __del__(self):
         self.shutdown()
@@ -154,12 +155,12 @@ class OnionNetlayer(Netlayer):
         self._connections.append(connection)
         return connection
 
-    def accept(self) -> CapTPSocket:
+    def accept(self) -> CapTPSession:
         """ Blocks until a CapTP connection is received, returning the socket """
         sock, addr = self._incoming_control_socket.accept()
         connection = CapTPSocket.from_socket(sock)
         self._connections.append(connection)
-        return connection
+        return CapTPSession(connection, self.location)
 
     def _read_and_expect(self, socket, expected):
         """ Read from a socket and expect a specific value """
@@ -175,7 +176,7 @@ class OnionNetlayer(Netlayer):
             if data[-1] == ord("\n"):
                 return data
 
-    def _add_hidden_service(self) -> Tuple[CapTPSocket, OCapNMachine]:
+    def add_hidden_service(self) -> Tuple[CapTPSocket, OCapNMachine]:
         """ Add a hidden service to the Tor process """
         if self._control_socket is None:
             raise Exception("Cannot add a hidden service after the control socket has been closed")
@@ -206,9 +207,10 @@ class OnionNetlayer(Netlayer):
 
         # Setup a socket to listen for incoming connections
         incoming_control_socket = CapTPSocket(
-            socket.AF_UNIX, socket.SOCK_DGRAM
+            socket.AF_UNIX, socket.SOCK_STREAM
         )
         incoming_control_socket.bind(ocapn_sock_path)
+        incoming_control_socket.listen()
 
         # Create the OCapNMachine that represents this hidden service
         ocapn_machine = OCapNMachine(syrup.Symbol("onion"), service_id, False)

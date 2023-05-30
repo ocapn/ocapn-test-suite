@@ -32,7 +32,7 @@ class OCapNMachine:
         return cls(Symbol(transport), address, False)
 
     @classmethod
-    def from_record(cls, record: Record):
+    def from_syrup(cls, record: Record):
         assert record.label == Symbol("ocapn-machine")
         assert len(record.args) == 3
         # TODO: probably want to support hints at a later date
@@ -40,7 +40,7 @@ class OCapNMachine:
 
         return cls(*record.args)
 
-    def to_syrup_record(self) -> Record:
+    def to_syrup(self) -> Record:
         return Record(
             Symbol("ocapn-machine"),
             [self.transport, self.address, self.hints]
