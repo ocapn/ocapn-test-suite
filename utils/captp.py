@@ -200,7 +200,10 @@ class CapTPSession:
             recipients = [recipients]
 
         while timeout >= 0:
+            start_time = time.time()
             message = self.expect_message_type((captp_types.OpDeliver, captp_types.OpDeliverOnly), timeout=timeout)
+            end_time = time.time()
+            timeout -= end_time - start_time
 
             # The `recipient` can be a tuple of matches, or a single match
             # the recipient can also be a DescExport or DescAnswer

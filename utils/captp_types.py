@@ -403,7 +403,7 @@ class OpStartSession(CapTPType):
 class OpBootstrap(CapTPType):
     """ <op:bootstrap answer-position resolve-me-desc> """
 
-    def __init__(self, answer_position: int, resolve_me_desc: DescImport):
+    def __init__(self, answer_position, resolve_me_desc: DescImport):
         self.answer_position = answer_position
         self.resolve_me_desc = resolve_me_desc
 
