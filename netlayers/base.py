@@ -17,6 +17,7 @@ import socket
 from contrib import syrup
 from utils.captp_types import CapTPType, decode_captp_message
 from utils.ocapn_uris import OCapNMachine
+from utils.captp import CapTPSession
 
 
 class ReadSocketIO:
@@ -98,6 +99,6 @@ class Netlayer(ABC):
     """ Base class for all netlayers """
 
     @abstractmethod
-    def connect(self, ocapn_machine: OCapNMachine) -> CapTPSocket:
+    def connect(self, ocapn_machine: OCapNMachine) -> CapTPSession:
         """ Connect to a remote machine returning a connection """
         pass

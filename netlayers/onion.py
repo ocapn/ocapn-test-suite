@@ -144,7 +144,7 @@ class OnionNetlayer(Netlayer):
     def __del__(self):
         self.shutdown()
 
-    def connect(self, ocapn_machine: OCapNMachine) -> CapTPSocket:
+    def connect(self, ocapn_machine: OCapNMachine) -> CapTPSession:
         """ Connect to the remote machine """
         # Finally setup a socket and connect to the CapTP server
         hidden_service_uri = f"{ocapn_machine.address}.onion"
@@ -153,7 +153,7 @@ class OnionNetlayer(Netlayer):
 
         connection = CapTPSocket.from_socket(onion_sock)
         self._connections.append(connection)
-        return connection
+        return CapTPSession(connection, self.location)
 
     def accept(self) -> CapTPSession:
         """ Blocks until a CapTP connection is received, returning the socket """

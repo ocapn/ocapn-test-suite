@@ -58,8 +58,7 @@ class CapTPTestCase(unittest.TestCase):
         self._next_import_object_pos = 0
 
     def setUp(self) -> None:
-        socket = self.netlayer.connect(self.ocapn_uri)
-        self.remote = CapTPSession(socket, self.ocapn_uri)
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         return super().setUp()
 
     def tearDown(self) -> None:
