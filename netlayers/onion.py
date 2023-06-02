@@ -155,8 +155,9 @@ class OnionNetlayer(Netlayer):
         self._connections.append(connection)
         return CapTPSession(connection, self.location)
 
-    def accept(self) -> CapTPSession:
+    def accept(self, timeout=120) -> CapTPSession:
         """ Blocks until a CapTP connection is received, returning the socket """
+        self._incoming_control_socket.settimeout(timeout)
         sock, addr = self._incoming_control_socket.accept()
         connection = CapTPSocket.from_socket(sock)
         self._connections.append(connection)
