@@ -94,33 +94,38 @@ class CapTPSession:
         return msg
 
     @property
+    def our_side_id(self):
+        our_encoded_pubkey = syrup_encode(self.public_key.to_syrup())
+        single_hashed_id = hashlib.sha256(our_encoded_pubkey).digest()
+        return hashlib.sha256(single_hashed_id).digest()
+
+    @property
+    def their_side_id(self):
+        their_encoded_pubkey = syrup_encode(self.remote_public_key.to_syrup())
+        single_hashed_id = hashlib.sha256(their_encoded_pubkey).digest()
+        return hashlib.sha256(single_hashed_id).digest()
+
+    @property
     def id(self):
         """ The session ID is a unique identifier for the session derived from each parties session keys """
-        # 1. SHA256 hash of the Syrup serialized session-key of both sides
-        our_encoded_pubkey = syrup_encode(self.public_key.to_syrup())
-        our_hashed_pubkey = hashlib.sha256(our_encoded_pubkey).digest()
+        # Calculate the ID of each side
+        our_side_id = self.our_side_id
+        their_side_id = self.their_side_id
 
-        their_encoded_pubkey = syrup_encode(self.remote_public_key.to_syrup())
-        their_hashed_pubkey = hashlib.sha256(their_encoded_pubkey).digest()
-
-        # 2. SHA256 hash of the hashed session-keys in step 1.
-        our_hashed_pubkey = hashlib.sha256(our_hashed_pubkey).digest()
-        their_hashed_pubkey = hashlib.sha256(their_hashed_pubkey).digest()
-
-        # 3. Sort them based on the resulting octets
-        keys = [our_hashed_pubkey, their_hashed_pubkey]
+        # 2. Sort them based on the resulting octets
+        keys = [our_side_id, their_side_id]
         keys.sort()
 
-        # 4. Concatinating them in the order from number 3
+        # 3. Concatinating them in the order from number 3
         session_id_hash = keys[0] + keys[1]
 
-        # 5. Append the string "prot0" to the beginning
+        # 4. Append the string "prot0" to the beginning
         session_id_hash = b"prot0" + session_id_hash
 
-        # 6. SHA256 hash the resulting string, this is the `session-ID`
+        # 5. SHA256 hash the resulting string, this is the `session-ID`
         hashed_session_id = hashlib.sha256(session_id_hash).digest()
 
-        # 7. SHA256 hash of the result produced in step 6.
+        # 6. SHA256 hash of the result produced in step 6.
         return hashlib.sha256(hashed_session_id).digest()
 
     @property
@@ -233,7 +238,7 @@ class CapTPSession:
                 listen_op = captp_types.OpListen(
                     message.args[1].as_export,
                     self.next_import_object,
-                    wants_partial=False
+                    wants_partial=True
                 )
                 self.send_message(listen_op)
                 resolve_me_desc = listen_op.exported_resolve_me_desc
