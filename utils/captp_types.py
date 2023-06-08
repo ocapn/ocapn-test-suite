@@ -279,9 +279,8 @@ class DescHandoffGive(CapTPType):
 
         receiver_key = CapTPPublicKey.from_syrup(record.args[0])
         exporter_location = OCapNMachine.from_syrup(record.args[1])
-        gifter_side = CapTPPublicKey.from_syrup(record.args[3])
 
-        return cls(receiver_key, exporter_location, record.args[2], gifter_side, record.args[4])
+        return cls(receiver_key, exporter_location, *record.args[2:])
 
     def to_syrup(self) -> syrup.Record:
         # The receiver key is encoded in the gcrypt s-expression format
@@ -291,7 +290,7 @@ class DescHandoffGive(CapTPType):
                 self.receiver_key.to_syrup(),
                 self.exporter_location.to_syrup(),
                 self.session,
-                self.gifter_side.to_syrup(),
+                self.gifter_side,
                 self.gift_id
             ]
         )
