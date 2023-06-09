@@ -102,3 +102,8 @@ class Netlayer(ABC):
     def connect(self, ocapn_machine: OCapNMachine) -> CapTPSession:
         """ Connect to a remote machine returning a connection """
         pass
+
+    @abstractmethod
+    def accept(self) -> CapTPSession:
+        """ Accept a connection from a remote machine returning a connection """
+        pass
