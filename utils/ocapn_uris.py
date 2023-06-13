@@ -45,3 +45,31 @@ class OCapNMachine:
             Symbol("ocapn-machine"),
             [self.transport, self.address, self.hints]
         )
+
+    def to_uri(self) -> str:
+        return f"ocapn://{self.address}.{self.transport}"
+
+
+class OCapNSturdyref:
+    """ <ocapn-sturdyref ocapn-machine swiss-num> """
+
+    def __init__(self, machine, swiss_num):
+        self.machine = machine
+        self.swiss_num = swiss_num
+
+    @classmethod
+    def from_syrup(cls, record: Record):
+        assert record.label == Symbol("ocapn-sturdyref")
+        assert len(record.args) == 2
+        machine = OCapNMachine.from_syrup(record.args[0])
+        return cls(machine, record.args[1])
+
+    def to_syrup(self) -> Record:
+        return Record(
+            Symbol("ocapn-sturdyref"),
+            [self.machine.to_syrup(), self.swiss_num]
+        )
+
+    def to_uri(self):
+        machine_uri = self.machine.to_uri()
+        return f"{machine_uri}/s/{self.swiss_num}"

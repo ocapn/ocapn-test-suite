@@ -13,9 +13,12 @@
 # limitations under the License.
 
 import hashlib
+import random
+import string
 
 from contrib.syrup import syrup_encode, Symbol
 from utils.test_suite import CapTPTestCase
+from utils.ocapn_uris import OCapNMachine, OCapNSturdyref
 from utils import captp_types
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -321,3 +324,32 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 
         failed_handoff = self.r2e_session.expect_promise_resolution(withdraw_gift_msg.exported_resolve_me_desc)
         self.assertEqual(failed_handoff.args[0], Symbol("break"))
+
+    def test_handoff_receive_invalid_signature(self):
+        """ Reject handoff-receive with invalid signature """
+        signed_handoff_give = self.make_valid_handoff()
+        handoff_give = signed_handoff_give.object
+
+        # Deposit the gift with the exporter
+        deposit_gift_msg = captp_types.OpDeliverOnly(
+            self.g2e_session.get_bootstrap_object(),
+            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
+        )
+        self.g2e_session.send_message(deposit_gift_msg)
+
+        # Withdraw the gift from the exporter (first time)
+        signed_handoff_receive = self.make_valid_handoff_receive(signed_handoff_give)
+
+        # Change the certificate to be invalid
+        signed_handoff_receive.signature = self.g2r_privkey.sign(b"this signature is invalid")
+        withdraw_gift_msg = captp_types.OpDeliver(
+            self.r2e_session.get_bootstrap_object(),
+            [Symbol("withdraw-gift"), signed_handoff_receive],
+            False,
+            self.r2e_session.next_import_object
+        )
+        self.r2e_session.send_message(withdraw_gift_msg)
+
+        # Check that we didn't get a successful handoff.
+        resolved_handoff = self.r2e_session.expect_promise_resolution(withdraw_gift_msg.exported_resolve_me_desc)
+        self.assertEqual(resolved_handoff.args[0], Symbol("break"))

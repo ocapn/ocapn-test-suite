@@ -70,6 +70,14 @@ promise with.
 
 This should be available at the swiss num: "IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr"
 
+## Sturdyref enlivener
+
+This takes a single argument which OCapN sturdyref object. The actor should
+"enliven" (connect to the machine and get a live reference to the object)
+the sturdyref and then return that to the messager.
+
+This should be available at the swiss num: "gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB"
+
 ## Licence
 
 Apache 2.0 License. See the LICENSE file for details.
