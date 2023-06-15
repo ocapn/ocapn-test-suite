@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import hashlib
+import time
 import random
 import string
 
@@ -353,3 +354,108 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         # Check that we didn't get a successful handoff.
         resolved_handoff = self.r2e_session.expect_promise_resolution(withdraw_gift_msg.exported_resolve_me_desc)
         self.assertEqual(resolved_handoff.args[0], Symbol("break"))
+
+
+class HandoffRemoteAsGifter(HandoffTestCase):
+    """ Third party handoffs: Gifter """
+
+    def setUp(self, *args, **kwargs):
+        super().setUp(*args, **kwargs)
+
+        # Create a gifter and exporter sessions
+        self.r2g_session = self.remote
+        self.r2g_session.setup_session()
+        self.e2g_session = self.other_netlayer.connect(self.ocapn_uri)
+        self.e2g_session.setup_session()
+
+        # Since we're both the gifter and exporter, let's just mimic a connection
+        self.r2e_pubkey, self.r2e_privkey, self.e2r_pubkey, self.e2r_privkey = self._generate_two_keypairs()
+
+        # Get the greeter
+        self.r2g_sturdyref_enlivener = self.r2g_session.fetch_object(b"gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB")
+
+    def random_sturdyref(self, session) -> OCapNSturdyref:
+        charset = string.ascii_letters + string.digits
+        swiss_num = "".join(random.choices(charset, k=32))
+        return OCapNSturdyref(
+            session.location,
+            swiss_num
+        )
+
+    def test_provides_valid_handoff_give(self):
+        """ Gifter correclty performs handoff and sends valid handoff-give """
+        # Message the sturdyref enlivener getting them to enliven an object on the exporter <-> gifter session
+        sturdyref = self.random_sturdyref(self.e2g_session)
+        enliven_msg = captp_types.OpDeliver(
+            self.r2g_sturdyref_enlivener,
+            [sturdyref.to_syrup()],
+            False,
+            self.r2g_session.next_import_object
+        )
+        self.r2g_session.send_message(enliven_msg)
+
+        # The gifter should try and get the bootstrap object and find the object at the sturdyref
+        e2g_bootstrap_obj = self.e2g_session.next_import_object
+        bootstrap_op = self.e2g_session.expect_message_type(captp_types.OpBootstrap)
+        bootstrap_reply = captp_types.OpDeliverOnly(
+            bootstrap_op.resolve_me_desc.to_desc_export(),
+            [Symbol("fulfill"), e2g_bootstrap_obj]
+        )
+        self.e2g_session.send_message(bootstrap_reply)
+
+        # Now expect the message to get the object
+        fetch_object_msg = self.e2g_session.expect_message_to((e2g_bootstrap_obj.to_desc_export(), bootstrap_op.vow))
+        self.assertIsInstance(fetch_object_msg, captp_types.OpDeliver)
+        self.assertEqual(fetch_object_msg.args[0], Symbol("fetch"))
+        self.assertEqual(fetch_object_msg.args[1], sturdyref.swiss_num)
+
+        fetch_object_reply = captp_types.OpDeliverOnly(
+            fetch_object_msg.exported_resolve_me_desc,
+            [Symbol("fulfill"), self.e2g_session.next_import_object]
+        )
+        self.e2g_session.send_message(fetch_object_reply)
+
+        # The deposit gift and the handoff-give could happen in any other, since we're working in a single threaded
+        # environment, we'll look for one and then if that fails look for the other.
+        expected_gift_deposit_msg = None
+        expected_handoff_give_reply = None
+        elapsed_time = 0
+        while expected_gift_deposit_msg is None or expected_handoff_give_reply is None:
+            start_time = time.time()
+            if expected_gift_deposit_msg is None:
+                try:
+                    expected_gift_deposit_msg = self.e2g_session.expect_message_to(
+                        e2g_bootstrap_obj.to_desc_export(),
+                        timeout=5
+                    )
+                except TimeoutError:
+                    pass
+            if expected_handoff_give_reply is None:
+                try:
+                    expected_handoff_give_reply = self.r2g_session.expect_promise_resolution(
+                        enliven_msg.exported_resolve_me_desc,
+                        timeout=5
+                    )
+                except TimeoutError:
+                    pass
+            elapsed_time += time.time() - start_time
+            if elapsed_time >= 60:
+                raise TimeoutError()
+
+        # Get the gift that should be deposited at the exporter
+        self.assertEqual(expected_gift_deposit_msg.args[0], Symbol("deposit-gift"))
+        deposited_gift_id = expected_gift_deposit_msg.args[1]
+
+        # Now we've provided the object, the reply to our original message should be a handoff-give
+        self.assertEqual(expected_handoff_give_reply.args[0], Symbol("fulfill"))
+
+        maybe_signed_handoff_give = expected_handoff_give_reply.args[1]
+        self.assertIsInstance(maybe_signed_handoff_give, captp_types.DescSigEnvelope)
+        maybe_handoff_give = maybe_signed_handoff_give.object
+        self.assertIsInstance(maybe_handoff_give, captp_types.DescHandoffGive)
+        handoff_give = maybe_handoff_give
+        self.assertEqual(handoff_give.receiver_key.to_syrup(), self.r2g_session.public_key.to_syrup())
+        self.assertEqual(handoff_give.exporter_location, self.e2g_session.location)
+        self.assertEqual(handoff_give.session, self.e2g_session.id)
+        self.assertEqual(handoff_give.gifter_side, self.e2g_session.their_side_id)
+        self.assertEqual(handoff_give.gift_id, deposited_gift_id)

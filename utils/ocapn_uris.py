@@ -23,6 +23,9 @@ class OCapNMachine:
         self.address = address
         self.hints = hints
 
+    def __eq__(self, other):
+        return isinstance(other, OCapNMachine) and self.to_syrup() == other.to_syrup()
+
     @classmethod
     def from_uri(cls, uri: str):
         """ Converts from the URI fromat ocapn://<address>.<transport> """
@@ -56,6 +59,9 @@ class OCapNSturdyref:
     def __init__(self, machine, swiss_num):
         self.machine = machine
         self.swiss_num = swiss_num
+
+    def __eq__(self, other):
+        return isinstance(other, OCapNSturdyref) and self.to_syrup() == other.to_syrup()
 
     @classmethod
     def from_syrup(cls, record: Record):

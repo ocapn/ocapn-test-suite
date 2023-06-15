@@ -4,7 +4,7 @@ This repository contains a test suite for CapTP, OCapN netlayers & OCapN URIs, a
 
 ## Requirements
 
-- Python 3.6 or greater,
+- Python 3.10 or greater,
 - python-cryptography
 
 ### Tor onion netlayer
