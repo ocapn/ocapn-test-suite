@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from contrib.syrup import syrup_encode
-from utils.test_suite import CapTPTestCase
+from utils.test_suite import CapTPTestCase, retry_on_network_timeout
 from utils.captp_types import OpStartSession, OpAbort, CapTPPublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -21,6 +21,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 class OpStartSessionTest(CapTPTestCase):
     """ `op:start-session` - used to begin the CapTP session """
 
+    @retry_on_network_timeout
     def test_captp_remote_version(self):
         """ Remote CapTP session sends a valid `op:start-session` """
         message = self.remote.receive_message()
@@ -30,6 +31,7 @@ class OpStartSessionTest(CapTPTestCase):
         # self.assertEqual(message.captp_version, "1")
         self.assertTrue(message.valid)
 
+    @retry_on_network_timeout
     def test_start_session_with_invalid_version(self):
         """ Remote CapTP session aborts upon invalid version """
         # First wait for their `op:start-session` message.
@@ -53,6 +55,7 @@ class OpStartSessionTest(CapTPTestCase):
         expected_abort = self.remote.receive_message()
         self.assertIsInstance(expected_abort, OpAbort)
 
+    @retry_on_network_timeout
     def test_start_session_with_invalid_signature(self):
         """ Remote CapTP session aborts upon invalid location signature """
         # First wait for their `op:start-session` message.

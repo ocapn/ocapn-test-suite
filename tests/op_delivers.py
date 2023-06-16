@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from contrib.syrup import Symbol
-from utils.test_suite import CapTPTestCase
+from utils.test_suite import CapTPTestCase, retry_on_network_timeout
 from utils.captp_types import OpDeliverOnly, OpDeliver
 
 
 class OpDeliverOnlyTest(CapTPTestCase):
     """ `op:deliver-only` - Send a mesage to an actor without a reply """
 
+    @retry_on_network_timeout
     def test_send_deliver_only(self):
         """ Send a message to an actor without a reply """
         self.remote.setup_session()
@@ -38,6 +39,7 @@ class OpDeliverOnlyTest(CapTPTestCase):
 class OpDeliverTest(CapTPTestCase):
     """ `op:deliver` - Send a message to an actor with a reply """
 
+    @retry_on_network_timeout
     def test_deliver_with_resolver(self):
         """ Deliver occurs with a response to the resolve me descriptor """
         self.remote.setup_session()
@@ -57,6 +59,7 @@ class OpDeliverTest(CapTPTestCase):
         self.assertEqual(response.args[0], Symbol("fulfill"))
         self.assertEqual(response.args[1], deliver_op.args)
 
+    @retry_on_network_timeout
     def test_deliver_promise_pipeline(self):
         """ Can promise pipeline on multiple messages """
         self.remote.setup_session()
@@ -97,6 +100,7 @@ class OpDeliverTest(CapTPTestCase):
         response = self.remote.expect_promise_resolution(drive_op.exported_resolve_me_desc)
         self.assertEqual(response.args, [Symbol("fulfill"), "Vroom! I am a red zoomracer car!"])
 
+    @retry_on_network_timeout
     def test_promise_pipeline_with_break(self):
         """ Pomise pipelining handles a broken promise when pipelining """
         self.remote.setup_session()

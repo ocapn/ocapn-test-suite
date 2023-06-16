@@ -34,7 +34,7 @@ class CapTPPublicKey:
 
     def __eq__(self, other):
         return isinstance(other, CapTPPublicKey) and \
-            self.public_key.to_syrup() == other.public_key.to_syrup()
+            self.to_syrup() == other.to_syrup()
 
     def verify(self, *args, **kwargs):
         return self.public_key.verify(*args, **kwargs)

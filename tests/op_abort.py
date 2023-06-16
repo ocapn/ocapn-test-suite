@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from utils.test_suite import CapTPTestCase
+from utils.test_suite import CapTPTestCase, retry_on_network_timeout
 from utils.captp_types import OpAbort, OpBootstrap, DescImportObject
 
 
 class OpBootstrapTest(CapTPTestCase):
     """ `op:abort` - end a session through aborting """
 
+    @retry_on_network_timeout
     def test_abort_before_setup(self):
         """ Aborting a session before a session has been fully setup """
         # Lets then abort the session and then send our `op:start-session`
@@ -33,6 +34,7 @@ class OpBootstrapTest(CapTPTestCase):
         with self.assertRaises((TimeoutError, ConnectionAbortedError)):
             self.remote.expect_message_to(bootstrap_op.exported_resolve_me_desc, timeout=10)
 
+    @retry_on_network_timeout
     def test_abort_after_setup(self):
         """ Aborting a session after setup renders it unusable """
         self.remote.setup_session()

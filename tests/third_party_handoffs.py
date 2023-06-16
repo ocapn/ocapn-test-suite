@@ -18,7 +18,7 @@ import random
 import string
 
 from contrib.syrup import syrup_encode, Symbol
-from utils.test_suite import CapTPTestCase
+from utils.test_suite import CapTPTestCase, retry_on_network_timeout
 from utils.ocapn_uris import OCapNMachine, OCapNSturdyref
 from utils import captp_types
 
@@ -63,6 +63,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         # Since we're both the gifter and exporter, let's just mimic a connection
         self.g2e_pubkey, self.g2e_privkey, self.e2g_pubkey, self.e2g_privkey = self._generate_two_keypairs()
 
+    @retry_on_network_timeout
     def make_valid_handoff(self, gift_id=b"my-gift"):
         # This isn't how real IDs are generated, but it's good enough for testing
         gifter_exporter_session_id = hashlib.sha256(b"Gifter <-> exporter session ID").digest()
@@ -81,6 +82,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
             self.g2e_privkey.sign(handoff_give.to_syrup())
         )
 
+    @retry_on_network_timeout
     def test_valid_handoff_without_prior_connection(self):
         """ Valid handoff give without prior connection """
         signed_handoff_give = self.make_valid_handoff()
@@ -130,6 +132,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         # Check the session ID is what we expect it to be
         self.assertEqual(handoff_receive.receiving_session, self.g2r_session.id)
 
+    @retry_on_network_timeout
     def test_valid_handoff_with_prior_connection(self):
         """ Valid handoff-give, with prior connection """
         signed_handoff_give = self.make_valid_handoff()
@@ -225,6 +228,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
             self.r2g_privkey.sign(handoff_receive.to_syrup())
         )
 
+    @retry_on_network_timeout
     def test_valid_handoff(self):
         """ Valid handoff receive, gift already deposited """
         signed_handoff_give = self.make_valid_handoff()
@@ -251,6 +255,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         self.assertEqual(resolved_handoff.args[0], Symbol("fulfill"))
         self.assertIsInstance(resolved_handoff.args[1], captp_types.DescImportObject)
 
+    @retry_on_network_timeout
     def test_valid_handoff_wait_deposit_gift(self):
         """ Valid handoff receive, sending deposite gift later """
         signed_handoff_give = self.make_valid_handoff()
@@ -290,6 +295,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         self.assertEqual(resolved_handoff.args[0], Symbol("fulfill"))
         self.assertIsInstance(resolved_handoff.args[1], captp_types.DescImportObject)
 
+    @retry_on_network_timeout
     def test_handoff_receive_invalid_handoff_count(self):
         """ Reject handoff-receive with invalid (already used) handoff count """
         signed_handoff_give = self.make_valid_handoff()
@@ -326,6 +332,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         failed_handoff = self.r2e_session.expect_promise_resolution(withdraw_gift_msg.exported_resolve_me_desc)
         self.assertEqual(failed_handoff.args[0], Symbol("break"))
 
+    @retry_on_network_timeout
     def test_handoff_receive_invalid_signature(self):
         """ Reject handoff-receive with invalid signature """
         signed_handoff_give = self.make_valid_handoff()
@@ -382,6 +389,7 @@ class HandoffRemoteAsGifter(HandoffTestCase):
             swiss_num
         )
 
+    @retry_on_network_timeout
     def test_provides_valid_handoff_give(self):
         """ Gifter correclty performs handoff and sends valid handoff-give """
         # Message the sturdyref enlivener getting them to enliven an object on the exporter <-> gifter session
@@ -454,6 +462,7 @@ class HandoffRemoteAsGifter(HandoffTestCase):
         maybe_handoff_give = maybe_signed_handoff_give.object
         self.assertIsInstance(maybe_handoff_give, captp_types.DescHandoffGive)
         handoff_give = maybe_handoff_give
+
         self.assertEqual(handoff_give.receiver_key, self.r2g_session.public_key)
         self.assertEqual(handoff_give.exporter_location, self.e2g_session.location)
         self.assertEqual(handoff_give.session, self.e2g_session.id)
