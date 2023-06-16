@@ -78,7 +78,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         )
         return captp_types.DescSigEnvelope(
             handoff_give,
-            self.g2e_privkey.sign(syrup_encode(handoff_give.to_syrup()))
+            self.g2e_privkey.sign(handoff_give.to_syrup())
         )
 
     def test_valid_handoff_without_prior_connection(self):
@@ -208,7 +208,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         )
         signed_handoff_give = captp_types.DescSigEnvelope(
             handoff_give,
-            self.g2e_session.private_key.sign(syrup_encode(handoff_give.to_syrup()))
+            self.g2e_session.private_key.sign(handoff_give.to_syrup())
         )
 
         return signed_handoff_give
@@ -222,7 +222,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         )
         return captp_types.DescSigEnvelope(
             handoff_receive,
-            self.r2g_privkey.sign(syrup_encode(handoff_receive.to_syrup()))
+            self.r2g_privkey.sign(handoff_receive.to_syrup())
         )
 
     def test_valid_handoff(self):
@@ -388,7 +388,7 @@ class HandoffRemoteAsGifter(HandoffTestCase):
         sturdyref = self.random_sturdyref(self.e2g_session)
         enliven_msg = captp_types.OpDeliver(
             self.r2g_sturdyref_enlivener,
-            [sturdyref.to_syrup()],
+            [sturdyref.to_syrup_record()],
             False,
             self.r2g_session.next_import_object
         )
@@ -454,7 +454,7 @@ class HandoffRemoteAsGifter(HandoffTestCase):
         maybe_handoff_give = maybe_signed_handoff_give.object
         self.assertIsInstance(maybe_handoff_give, captp_types.DescHandoffGive)
         handoff_give = maybe_handoff_give
-        self.assertEqual(handoff_give.receiver_key.to_syrup(), self.r2g_session.public_key.to_syrup())
+        self.assertEqual(handoff_give.receiver_key, self.r2g_session.public_key)
         self.assertEqual(handoff_give.exporter_location, self.e2g_session.location)
         self.assertEqual(handoff_give.session, self.e2g_session.id)
         self.assertEqual(handoff_give.gifter_side, self.e2g_session.their_side_id)

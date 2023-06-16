@@ -47,11 +47,11 @@ class CapTPSession:
         self.public_key = captp_types.CapTPPublicKey.from_private_key(self.private_key)
 
         # Create the signature.
-        my_location = Record(
+        encoded_my_location = syrup_encode(Record(
             label=Symbol("my-location"),
-            args=[self.location.to_syrup()]
-        )
-        location_sig = self.private_key.sign(syrup_encode(my_location))
+            args=[self.location.to_syrup_record()]
+        ))
+        location_sig = self.private_key.sign(encoded_my_location)
         start_session_op = captp_types.OpStartSession(
             remote_start_session.captp_version,
             self.public_key,
@@ -95,13 +95,13 @@ class CapTPSession:
 
     @property
     def our_side_id(self):
-        our_encoded_pubkey = syrup_encode(self.public_key.to_syrup())
+        our_encoded_pubkey = self.public_key.to_syrup()
         single_hashed_id = hashlib.sha256(our_encoded_pubkey).digest()
         return hashlib.sha256(single_hashed_id).digest()
 
     @property
     def their_side_id(self):
-        their_encoded_pubkey = syrup_encode(self.remote_public_key.to_syrup())
+        their_encoded_pubkey = self.remote_public_key.to_syrup()
         single_hashed_id = hashlib.sha256(their_encoded_pubkey).digest()
         return hashlib.sha256(single_hashed_id).digest()
 

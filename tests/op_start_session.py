@@ -40,7 +40,7 @@ class OpStartSessionTest(CapTPTestCase):
         private_key = Ed25519PrivateKey.generate()
         public_key = CapTPPublicKey.from_private_key(private_key)
         location = self.netlayer.location
-        location_sig = private_key.sign(syrup_encode(location.to_syrup()))
+        location_sig = private_key.sign(location.to_syrup())
         start_session_op = OpStartSession(
             "invalid-version-number",
             public_key,

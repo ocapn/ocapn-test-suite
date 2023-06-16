@@ -12,10 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contrib.syrup import Symbol, Record
+from contrib.syrup import Symbol, Record, syrup_encode
 
 
-class OCapNMachine:
+class OCapNURI:
+
+    def to_syrup_record(self):
+        pass
+
+    def to_syrup(self):
+        return syrup_encode(self.to_syrup_record())
+
+
+class OCapNMachine(OCapNURI):
     """ <ocapn-machine transport address hints> """
 
     def __init__(self, transport: Symbol, address: str, hints: bool):
@@ -35,7 +44,7 @@ class OCapNMachine:
         return cls(Symbol(transport), address, False)
 
     @classmethod
-    def from_syrup(cls, record: Record):
+    def from_syrup_record(cls, record: Record):
         assert record.label == Symbol("ocapn-machine")
         assert len(record.args) == 3
         # TODO: probably want to support hints at a later date
@@ -43,7 +52,7 @@ class OCapNMachine:
 
         return cls(*record.args)
 
-    def to_syrup(self) -> Record:
+    def to_syrup_record(self) -> Record:
         return Record(
             Symbol("ocapn-machine"),
             [self.transport, self.address, self.hints]
@@ -53,7 +62,7 @@ class OCapNMachine:
         return f"ocapn://{self.address}.{self.transport}"
 
 
-class OCapNSturdyref:
+class OCapNSturdyref(OCapNURI):
     """ <ocapn-sturdyref ocapn-machine swiss-num> """
 
     def __init__(self, machine, swiss_num):
@@ -64,16 +73,16 @@ class OCapNSturdyref:
         return isinstance(other, OCapNSturdyref) and self.to_syrup() == other.to_syrup()
 
     @classmethod
-    def from_syrup(cls, record: Record):
+    def from_syrup_record(cls, record: Record):
         assert record.label == Symbol("ocapn-sturdyref")
         assert len(record.args) == 2
-        machine = OCapNMachine.from_syrup(record.args[0])
+        machine = OCapNMachine.from_syrup_record(record.args[0])
         return cls(machine, record.args[1])
 
-    def to_syrup(self) -> Record:
+    def to_syrup_record(self) -> Record:
         return Record(
             Symbol("ocapn-sturdyref"),
-            [self.machine.to_syrup(), self.swiss_num]
+            [self.machine.to_syrup_record(), self.swiss_num]
         )
 
     def to_uri(self):

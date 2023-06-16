@@ -32,6 +32,10 @@ class CapTPPublicKey:
     def __init__(self, public_key: Ed25519PublicKey):
         self.public_key = public_key
 
+    def __eq__(self, other):
+        return isinstance(other, CapTPPublicKey) and \
+            self.public_key.to_syrup() == other.public_key.to_syrup()
+
     def verify(self, *args, **kwargs):
         return self.public_key.verify(*args, **kwargs)
 
@@ -47,7 +51,7 @@ class CapTPPublicKey:
         return self.public_key.public_bytes(*args, **kwargs)
 
     @classmethod
-    def from_syrup(cls, data):
+    def from_syrup_record(cls, data):
         assert data[0] == syrup.Symbol("public-key")
         assert data[1][0] == syrup.Symbol("ecc")
         assert data[1][1] == [syrup.Symbol("curve"), syrup.Symbol("Ed25519")]
@@ -57,6 +61,9 @@ class CapTPPublicKey:
         return cls.from_public_bytes(encoded_key)
 
     def to_syrup(self):
+        return syrup.syrup_encode(self.to_syrup_record())
+
+    def to_syrup_record(self):
         return [
             syrup.Symbol("public-key"),
             [
@@ -76,24 +83,28 @@ class CapTPType(ABC):
 
     @classmethod
     @abstractmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         """ Converts from a syrup record """
         pass
 
     @abstractmethod
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         """ Converts to a syrup record """
         pass
 
+    def to_syrup(self) -> bytes:
+        """ Converts to a syrup encoded byte string """
+        return syrup.syrup_encode(self.to_syrup_record())
+
     def __repr__(self):
-        record = self.to_syrup()
+        record = self.to_syrup_record()
         type_name = str(record.label)
         return f"<{type_name} {record.args}>"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, CapTPType):
             return False
-        return other.to_syrup() == self.to_syrup()
+        return other.to_syrup_record() == self.to_syrup_record()
 
 
 class DescImport(CapTPType, ABC):
@@ -116,12 +127,12 @@ class DescImportObject(DescImport):
         super().__init__(position)
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("desc:import-object")
         assert len(record.args) == 1
         return cls(*record.args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("desc:import-object"),
             [self.position]
@@ -134,12 +145,12 @@ class DescImportPromise(DescImport):
         super().__init__(position)
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("desc:import-promise")
         assert len(record.args) == 1
         return cls(*record.args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("desc:import-promise"),
             [self.position]
@@ -158,12 +169,12 @@ class DescExport(CapTPType):
         self.position = position
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("desc:export")
         assert len(record.args) == 1
         return cls(*record.args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("desc:export"),
             [self.position]
@@ -177,12 +188,12 @@ class DescAnswer(CapTPType):
         self.position = position
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("desc:answer")
         assert len(record.args) == 1
         return cls(*record.args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("desc:answer"),
             [self.position]
@@ -198,7 +209,7 @@ class DescSigEnvelope(CapTPType):
 
     def verify(self, public_key: CapTPPublicKey) -> bool:
         """ Verifies the signature with the given public key """
-        encoded_data = syrup.syrup_encode(self.object.to_syrup())
+        encoded_data = syrup.syrup_encode(self.object.to_syrup_record())
         try:
             public_key.verify(self.signature, encoded_data)
             return True
@@ -206,7 +217,7 @@ class DescSigEnvelope(CapTPType):
             return False
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("desc:sig-envelope")
         assert len(record.args) == 2
 
@@ -234,7 +245,7 @@ class DescSigEnvelope(CapTPType):
         signature = r + s
         return cls(signed_object, signature)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         # The signature in CapTP is modelled after the gcrypt s-expression format
         r = self.signature[0:32]
         s = self.signature[32:]
@@ -250,7 +261,7 @@ class DescSigEnvelope(CapTPType):
 
         return syrup.Record(
             syrup.Symbol("desc:sig-envelope"),
-            [self.object.to_syrup(), encoded_signature]
+            [self.object.to_syrup_record(), encoded_signature]
         )
 
 
@@ -273,22 +284,22 @@ class DescHandoffGive(CapTPType):
         self.gift_id = gift_id
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("desc:handoff-give")
         assert len(record.args) == 5
 
-        receiver_key = CapTPPublicKey.from_syrup(record.args[0])
-        exporter_location = OCapNMachine.from_syrup(record.args[1])
+        receiver_key = CapTPPublicKey.from_syrup_record(record.args[0])
+        exporter_location = OCapNMachine.from_syrup_record(record.args[1])
 
         return cls(receiver_key, exporter_location, *record.args[2:])
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         # The receiver key is encoded in the gcrypt s-expression format
         return syrup.Record(
             syrup.Symbol("desc:handoff-give"),
             [
-                self.receiver_key.to_syrup(),
-                self.exporter_location.to_syrup(),
+                self.receiver_key.to_syrup_record(),
+                self.exporter_location.to_syrup_record(),
                 self.session,
                 self.gifter_side,
                 self.gift_id
@@ -312,22 +323,22 @@ class DescHandoffReceive(CapTPType):
         self.signed_give = signed_give
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("desc:handoff-receive")
         assert len(record.args) == 4
 
-        signed_give = DescSigEnvelope.from_syrup(record.args[3])
+        signed_give = DescSigEnvelope.from_syrup_record(record.args[3])
 
         return cls(record.args[0], record.args[1], record.args[2], signed_give)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("desc:handoff-receive"),
             [
                 self.receiving_session,
                 self.receiving_side,
                 self.handoff_count,
-                self.signed_give.to_syrup()
+                self.signed_give.to_syrup_record()
             ]
         )
 
@@ -348,7 +359,7 @@ class OpStartSession(CapTPType):
         # This is to prevent the signature from being used in other contexts.
         tagged_location = syrup.Record(
             syrup.Symbol("my-location"),
-            [self.location.to_syrup()]
+            [self.location.to_syrup_record()]
         )
         # The signature is of the syrup representation of the tagged location
         encoded_location = syrup.syrup_encode(tagged_location)
@@ -359,12 +370,12 @@ class OpStartSession(CapTPType):
             return False
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:start-session")
         assert len(record.args) == 4
         # The session pubkey is encoded as a gcrypt s-expression
         # (public-key (ecc (curve Ed25519) (flags eddsa) (q <pubkey data>))
-        pubkey = CapTPPublicKey.from_syrup(record.args[1])
+        pubkey = CapTPPublicKey.from_syrup_record(record.args[1])
 
         # The location signature is encoded as a gcrypt s-expression
         # (sig-val (eddsa (r <r data>) (s <s data>)))
@@ -380,7 +391,7 @@ class OpStartSession(CapTPType):
         location = decode_captp_message(record.args[2])
         return cls(record.args[0], pubkey, location, location_sig)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         # Convert the location signature to the gcrypt s-expression format
         r = self.location_sig[0:32]
         s = self.location_sig[32:]
@@ -394,8 +405,8 @@ class OpStartSession(CapTPType):
 
         return syrup.Record(
             syrup.Symbol("op:start-session"),
-            [self.captp_version, self.session_pubkey.to_syrup(),
-             self.location.to_syrup(), encoded_location_sig]
+            [self.captp_version, self.session_pubkey.to_syrup_record(),
+             self.location.to_syrup_record(), encoded_location_sig]
         )
 
 
@@ -417,18 +428,18 @@ class OpBootstrap(CapTPType):
         return self.resolve_me_desc.to_desc_export()
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:bootstrap")
         assert len(record.args) == 2
         resolve_me_desc = decode_captp_message(record.args[1])
         return cls(record.args[0], resolve_me_desc)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("op:bootstrap"),
             [
                 self.answer_position,
-                self.resolve_me_desc.to_syrup()
+                self.resolve_me_desc.to_syrup_record()
             ]
         )
 
@@ -447,7 +458,7 @@ class OpListen(CapTPType):
         return self.resolve_me_desc.to_desc_export()
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:listen")
         assert len(record.args) == 3
         to = decode_captp_message(record.args[0])
@@ -455,10 +466,10 @@ class OpListen(CapTPType):
         wants_partial = record.args[2]
         return cls(to, resolve_me_desc, wants_partial)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("op:listen"),
-            [self.to.to_syrup(), self.resolve_me_desc.to_syrup(), self.want_partial]
+            [self.to.to_syrup_record(), self.resolve_me_desc.to_syrup_record(), self.want_partial]
         )
 
 
@@ -470,7 +481,7 @@ class OpDeliverOnly(CapTPType):
         self.args = args
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:deliver-only")
         assert len(record.args) == 2
         to = decode_captp_message(record.args[0])
@@ -479,18 +490,18 @@ class OpDeliverOnly(CapTPType):
         args = [maybe_decode_captp_type(arg) for arg in record.args[1]]
         return cls(to, args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         # TODO: Should we convert args to syrup records, if needed.
         encoded_args = []
         for arg in self.args:
             if isinstance(arg, CapTPType):
-                encoded_args.append(arg.to_syrup())
+                encoded_args.append(arg.to_syrup_record())
             else:
                 encoded_args.append(arg)
 
         return syrup.Record(
             syrup.Symbol("op:deliver-only"),
-            [self.to.to_syrup(), encoded_args]
+            [self.to.to_syrup_record(), encoded_args]
         )
 
 
@@ -517,7 +528,7 @@ class OpDeliver(CapTPType):
         return self.resolve_me_desc.to_desc_export()
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:deliver")
         assert len(record.args) == 4
         to = decode_captp_message(record.args[0])
@@ -527,21 +538,21 @@ class OpDeliver(CapTPType):
         resolve_me_desc = decode_captp_message(record.args[3])
         return cls(to, args, answer_position, resolve_me_desc)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         encoded_args = []
         for arg in self.args:
             if isinstance(arg, CapTPType):
-                encoded_args.append(arg.to_syrup())
+                encoded_args.append(arg.to_syrup_record())
             else:
                 encoded_args.append(arg)
 
         return syrup.Record(
             syrup.Symbol("op:deliver"),
             [
-                self.to.to_syrup(),
+                self.to.to_syrup_record(),
                 encoded_args,
                 self.answer_position,
-                self.resolve_me_desc.to_syrup()
+                self.resolve_me_desc.to_syrup_record()
             ]
         )
 
@@ -553,12 +564,12 @@ class OpAbort(CapTPType):
         self.reason = reason
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:abort")
         assert len(record.args) == 1
         return cls(*record.args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("op:abort"),
             [self.reason]
@@ -573,12 +584,12 @@ class OpGcExport(CapTPType):
         self.wire_delta = wire_delta
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:gc-export")
         assert len(record.args) == 2
         return cls(*record.args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("op:gc-export"),
             [self.export_position, self.wire_delta]
@@ -592,12 +603,12 @@ class OpGcAnswer(CapTPType):
         self.answer_position = answer_position
 
     @classmethod
-    def from_syrup(cls, record: syrup.Record):
+    def from_syrup_record(cls, record: syrup.Record):
         assert record.label == syrup.Symbol("op:gc-answer")
         assert len(record.args) == 1
         return cls(*record.args)
 
-    def to_syrup(self) -> syrup.Record:
+    def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("op:gc-answer"),
             [self.answer_position]
@@ -633,11 +644,11 @@ def maybe_decode_captp_type(value):
     if isinstance(value, (list, tuple)):
         return [maybe_decode_captp_type(v) for v in value]
     if isinstance(value, syrup.Record) and value.label in CAPTP_TYPES:
-        return CAPTP_TYPES[value.label].from_syrup(value)
+        return CAPTP_TYPES[value.label].from_syrup_record(value)
     return value
 
 
 def decode_captp_message(record: syrup.Record):
     """ Decode a captp message from a syrup record """
     assert record.label in CAPTP_TYPES, f"Unknown captp type: {record.label}"
-    return CAPTP_TYPES[record.label].from_syrup(record)
+    return CAPTP_TYPES[record.label].from_syrup_record(record)

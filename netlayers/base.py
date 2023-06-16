@@ -84,8 +84,7 @@ class CapTPSocket(socket.socket):
         """ Send data to the remote machine """
         if isinstance(message, CapTPType):
             message = message.to_syrup()
-        encoded_message = syrup.syrup_encode(message)
-        self.sendall(encoded_message)
+        self.sendall(message)
 
     def receive_message(self, timeout=120) -> CapTPType:
         """ Receive data from the remote machine """
