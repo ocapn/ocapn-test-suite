@@ -14,8 +14,6 @@
 
 import unittest
 
-from utils.captp import CapTPSession
-
 
 class CapTPTestLoader(unittest.loader.TestLoader):
     """ Custom loader which provides the netlayer when constructing the test cases """
