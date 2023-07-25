@@ -22,9 +22,10 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 class CapTPSession:
     """ Representation of a CapTP session for testing purposes """
 
-    def __init__(self, connection, location):
+    def __init__(self, connection, location, is_outbound):
         self.connection = connection
         self.location = location
+        self.is_outbound = is_outbound
         self._bootstrap_object = None
         self.public_key = None
         self.private_key = None
@@ -48,12 +49,25 @@ class CapTPSession:
         ))
         location_sig = self.private_key.sign(encoded_my_location)
         start_session_op = captp_types.OpStartSession(
-            captp_version,
+            self.captp_version,
             self.public_key,
             self.location,
             location_sig
         )
-        self.send_message(start_session_op)
+
+        if self.is_outbound:
+            self.send_message(start_session_op)
+            # Get their `op:start-session` message
+            remote_start_session = self.receive_message()
+            assert isinstance(remote_start_session, captp_types.OpStartSession)
+        else:
+            # Get their `op:start-session` message
+            remote_start_session = self.receive_message()
+            assert isinstance(remote_start_session, captp_types.OpStartSession)
+            start_session_op.captp_version = remote_start_session.captp_version
+
+        self.remote_public_key = remote_start_session.session_pubkey
+
 
         # Get their `op:start-session` message
         remote_start_session = self.receive_message()

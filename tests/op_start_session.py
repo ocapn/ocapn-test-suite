@@ -86,8 +86,8 @@ class OpStartSessionTest(CapTPTestCase):
         self.assertIsInstance(expected_abort, OpAbort)
 
     @retry_on_network_timeout
-    def test_crossed_hellos_mitigation(self):
-        """ Crossed hellos problem """
+    def test_crossed_hellos_mitigation_aborts_inbound(self):
+        """ Crossed Hellos Problem is detected: inbound connection aborts """
         # To cause the remote side to try to open a session with us, we'll need to
         # use the "sturdyref enlivener" and get them to make a session to another
         # session we control, where we can make an outbound session to them at the
@@ -108,16 +108,31 @@ class OpStartSessionTest(CapTPTestCase):
         msg = OpDeliverOnly(sturdyref_enlivener_refr, [sturdyref.to_syrup_record()])
         self.remote.send_message(msg)
 
+        # Get the location and create a signature
+        location = other_session.location
+        encoded_location_sig = syrup_encode(Record(
+            Symbol("my-location"),
+            [location.to_syrup_record()]
+        ))
+
         # Wait for our inbound connection
         inbound = other_session.accept()
         inbound.private_key = Ed25519PrivateKey.generate()
         inbound.public_key = CapTPPublicKey.from_private_key(inbound.private_key)
         inbound_remote_start_session = inbound.expect_message_type(OpStartSession)
+        inbound.remote_public_key = inbound_remote_start_session.session_pubkey
 
-        # Open a connection to the otherside
         outbound = other_session.connect(self.ocapn_uri)
-        outbound.private_key = Ed25519PrivateKey.generate()
-        outbound.public_key = CapTPPublicKey.from_private_key(outbound.private_key)
+        # We need to keep generating a key until we find one where the outbound session
+        # would win out.
+        while True:
+            outbound.private_key = Ed25519PrivateKey.generate()
+            outbound.public_key = CapTPPublicKey.from_private_key(outbound.private_key)
+            ids = [outbound.our_side_id, inbound.their_side_id]
+            ids.sort()
+            if ids[0] == inbound.their_side_id:
+                break
+
         outbound_location_sig = Record(
             Symbol("my-location"),
             [outbound.location.to_syrup_record()]
@@ -130,20 +145,68 @@ class OpStartSessionTest(CapTPTestCase):
         )
         outbound.send_message(outbound_start_session_op)
 
-        # Wait for the remote's op:start-session on the inbound connection
-        inbound_remote_start_session_op = inbound.expect_message_type(OpStartSession)
-        inbound.remote_public_key = inbound_remote_start_session_op.public_key
+        maybe_abort = inbound.expect_message_type(OpAbort)
+        self.assertIsInstance(maybe_abort, OpAbort)
 
-        # At this point, the remote side should detect the crossed hellos and the
-        # correct session. The session it aborts should be the "lowest" of the two
-        ids = [outbound.our_side_id, inbound.their_side_id]
-        ids.sort()
+    @retry_on_network_timeout
+    def test_crossed_hellos_mitigation_outbound_aborts(self):
+        """ Crossed Hellos Problem is detected: outbound connection aborts """
+        # To cause the remote side to try to open a session with us, we'll need to
+        # use the "sturdyref enlivener" and get them to make a session to another
+        # session we control, where we can make an outbound session to them at the
+        # same time.
 
-        expected_abort_session = None
-        if ids[0] == outbound.our_side_id:
-            expected_abort_session = outbound
-        else:
-            expected_abort_session = inbound
+        # Setup our session to the the remote side.
+        self.remote.setup_session()
 
-        maybe_abort = expected_abort_session.receive_message()
+        # Get the the sturdyref enlivener actor
+        sturdyref_enlivener_refr = self.remote.fetch_object(b"gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB")
+
+        # Setup other session to try a crossed hellos and create a sturdyref to it.
+        netlayer_class = type(self.netlayer)
+        other_session = netlayer_class()
+        sturdyref = ocapn_uris.OCapNSturdyref(other_session.location, b"my-object")
+
+        # Send the message getting the other session to enliven it.
+        msg = OpDeliverOnly(sturdyref_enlivener_refr, [sturdyref.to_syrup_record()])
+        self.remote.send_message(msg)
+
+        # Get the location and create a signature
+        location = other_session.location
+        encoded_location_sig = syrup_encode(Record(
+            Symbol("my-location"),
+            [location.to_syrup_record()]
+        ))
+
+        # Wait for our inbound connection
+        inbound = other_session.accept()
+        inbound.private_key = Ed25519PrivateKey.generate()
+        inbound.public_key = CapTPPublicKey.from_private_key(inbound.private_key)
+        inbound_remote_start_session = inbound.expect_message_type(OpStartSession)
+        inbound.remote_public_key = inbound_remote_start_session.session_pubkey
+
+        outbound = other_session.connect(self.ocapn_uri)
+        # We need to keep generating a key until we find one where the outbound session
+        # would win out.
+        while True:
+            outbound.private_key = Ed25519PrivateKey.generate()
+            outbound.public_key = CapTPPublicKey.from_private_key(outbound.private_key)
+            ids = [outbound.our_side_id, inbound.their_side_id]
+            ids.sort()
+            if ids[0] == outbound.our_side_id:
+                break
+
+        outbound_location_sig = Record(
+            Symbol("my-location"),
+            [outbound.location.to_syrup_record()]
+        )
+        outbound_start_session_op = OpStartSession(
+            inbound_remote_start_session.captp_version,
+            outbound.public_key,
+            outbound.location,
+            outbound.private_key.sign(syrup_encode(outbound_location_sig))
+        )
+        outbound.send_message(outbound_start_session_op)
+
+        maybe_abort = outbound.expect_message_type(OpAbort)
         self.assertIsInstance(maybe_abort, OpAbort)
