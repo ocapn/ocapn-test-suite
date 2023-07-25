@@ -49,26 +49,13 @@ class CapTPSession:
         ))
         location_sig = self.private_key.sign(encoded_my_location)
         start_session_op = captp_types.OpStartSession(
-            self.captp_version,
+            captp_version,
             self.public_key,
             self.location,
             location_sig
         )
 
-        if self.is_outbound:
-            self.send_message(start_session_op)
-            # Get their `op:start-session` message
-            remote_start_session = self.receive_message()
-            assert isinstance(remote_start_session, captp_types.OpStartSession)
-        else:
-            # Get their `op:start-session` message
-            remote_start_session = self.receive_message()
-            assert isinstance(remote_start_session, captp_types.OpStartSession)
-            start_session_op.captp_version = remote_start_session.captp_version
-
-        self.remote_public_key = remote_start_session.session_pubkey
-
-
+        self.send_message(start_session_op)
         # Get their `op:start-session` message
         remote_start_session = self.receive_message()
         assert isinstance(remote_start_session, captp_types.OpStartSession)

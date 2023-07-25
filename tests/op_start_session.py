@@ -62,7 +62,7 @@ class OpStartSessionTest(CapTPTestCase):
         self.remote.send_message(start_session_op)
 
         # We should receive an abort message from the remote.
-        expected_abort = self.remote.receive_message()
+        expected_abort = self.remote.expect_message_type(OpAbort)
         self.assertIsInstance(expected_abort, OpAbort)
 
     @retry_on_network_timeout
@@ -82,7 +82,7 @@ class OpStartSessionTest(CapTPTestCase):
         self.remote.send_message(start_session_op)
 
         # We should receive an abort message from the remote.
-        expected_abort = self.remote.receive_message()
+        expected_abort = self.remote.expect_message_type(OpAbort)
         self.assertIsInstance(expected_abort, OpAbort)
 
     @retry_on_network_timeout
@@ -94,7 +94,7 @@ class OpStartSessionTest(CapTPTestCase):
         # same time.
 
         # Setup our session to the the remote side.
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         # Get the the sturdyref enlivener actor
         sturdyref_enlivener_refr = self.remote.fetch_object(b"gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB")
@@ -157,7 +157,7 @@ class OpStartSessionTest(CapTPTestCase):
         # same time.
 
         # Setup our session to the the remote side.
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         # Get the the sturdyref enlivener actor
         sturdyref_enlivener_refr = self.remote.fetch_object(b"gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB")
