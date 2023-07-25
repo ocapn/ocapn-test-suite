@@ -23,7 +23,7 @@ class OpDeliverOnlyTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_send_deliver_only(self):
         """ Send a message to an actor without a reply """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         greeter_refr = self.remote.fetch_object(b"VMDDd1voKWarCe2GvgLbxbVFysNzRPzx")
         # Send a message to the greeter, telling them to greet us.
@@ -42,7 +42,7 @@ class OpDeliverTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_deliver_with_resolver(self):
         """ Deliver occurs with a response to the resolve me descriptor """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         echo_refr = self.remote.fetch_object(b"IO58l1laTyhcrgDKbEzFOO32MDd6zE5w")
 
@@ -62,7 +62,7 @@ class OpDeliverTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_deliver_promise_pipeline(self):
         """ Can promise pipeline on multiple messages """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         car_factory_builder_refr = self.remote.fetch_object(
             b"JadQ0++RzsD4M+40uLxTWVaVqM10DcBJ",
@@ -103,7 +103,7 @@ class OpDeliverTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_promise_pipeline_with_break(self):
         """ Pomise pipelining handles a broken promise when pipelining """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         car_factory_builder_refr = self.remote.fetch_object(
             b"JadQ0++RzsD4M+40uLxTWVaVqM10DcBJ",

@@ -42,6 +42,11 @@ if __name__ == "__main__":
         help="Specific test module to run",
         default=None
     )
+    parser.add_argument(
+        "--captp-version",
+        help="Override the CapTP version sent by the test suite",
+        default="1.0"
+    )
     args = parser.parse_args()
 
     # Parse and validate the address
@@ -53,6 +58,6 @@ if __name__ == "__main__":
         print(f"Unable to setup netlayer: {e}")
         sys.exit(1)
 
-    runner = CapTPTestRunner(netlayer, ocapn_machine_uri)
+    runner = CapTPTestRunner(netlayer, ocapn_machine_uri, args.captp_version)
     suite = runner.loadTests(args.test_module)
     runner.run(suite)

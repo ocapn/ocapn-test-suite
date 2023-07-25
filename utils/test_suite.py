@@ -17,15 +17,16 @@ import unittest
 
 class CapTPTestLoader(unittest.loader.TestLoader):
     """ Custom loader which provides the netlayer when constructing the test cases """
-    def __init__(self, netlayer, ocapn_uri, *args, **kwargs):
+    def __init__(self, netlayer, ocapn_uri, captp_version, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.netlayer = netlayer
         self.ocapn_uri = ocapn_uri
+        self.captp_version = captp_version
 
     def loadTestsFromTestCase(self, test_case_class):
         if issubclass(test_case_class, CapTPTestCase):
             names = self.getTestCaseNames(test_case_class)
-            tests = [test_case_class(self.netlayer, self.ocapn_uri, method_name) for method_name in names]
+            tests = [test_case_class(self.netlayer, self.ocapn_uri, self.captp_version, method_name) for method_name in names]
             return self.suiteClass(tests)
 
         return super().loadTestsFromTestCase(test_case_class)
@@ -33,13 +34,14 @@ class CapTPTestLoader(unittest.loader.TestLoader):
 
 class CapTPTestRunner(unittest.TextTestRunner):
 
-    def __init__(self, netlayer, ocapn_uri, *args, **kwargs):
+    def __init__(self, netlayer, ocapn_uri, captp_version, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.netlayer = netlayer
         self.ocapn_uri = ocapn_uri
+        self.captp_version = captp_version
 
     def loadTests(self, test_module=None):
-        loader = CapTPTestLoader(self.netlayer, self.ocapn_uri)
+        loader = CapTPTestLoader(self.netlayer, self.ocapn_uri, self.captp_version)
         if test_module:
             return loader.loadTestsFromName(test_module)
         return loader.discover("tests", pattern="*.py")
@@ -48,10 +50,11 @@ class CapTPTestRunner(unittest.TextTestRunner):
 class CapTPTestCase(unittest.TestCase):
     """ Base class for all CapTP tests """
 
-    def __init__(self, netlayer, ocapn_uri, *args, **kwargs):
+    def __init__(self, netlayer, ocapn_uri, captp_version, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.netlayer = netlayer
         self.ocapn_uri = ocapn_uri
+        self.captp_version = captp_version
         self.remote = None
         self._next_answer_pos = 0
         self._next_import_object_pos = 0

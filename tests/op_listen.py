@@ -49,7 +49,7 @@ class OpListenTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_op_listen_to_promise_and_fulfill(self):
         """ Notified when a promise is fulfilled """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
@@ -77,7 +77,7 @@ class OpListenTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_op_listen_to_promise_and_break(self):
         """ Notified when a promise is broken """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()
@@ -105,7 +105,7 @@ class OpListenTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_op_listen_already_has_answer(self):
         """ Notified when listening on a resolved promise """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         # First lets get a promise and resolver
         vow, resolver = self.make_promise_resolver_pair()

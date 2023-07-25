@@ -27,7 +27,7 @@ class OpBootstrapTest(CapTPTestCase):
         self.remote.send_message(abort_op)
 
         # Now setup the session
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         # Finally see if we can use the setup session by sending an `op:bootstrap`
         bootstrap_op = OpBootstrap(0, DescImportObject(0))
@@ -37,7 +37,7 @@ class OpBootstrapTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_abort_after_setup(self):
         """ Aborting a session after setup renders it unusable """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         # Lets then abort the session and then send our `op:start-session`
         abort_op = OpAbort("test-abort-after-setup")

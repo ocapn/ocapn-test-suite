@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contrib.syrup import syrup_encode
+from contrib.syrup import syrup_encode, Record, Symbol
 from utils.test_suite import CapTPTestCase, retry_on_network_timeout
 from utils.captp_types import OpStartSession, OpAbort, CapTPPublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -24,25 +24,34 @@ class OpStartSessionTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_captp_remote_version(self):
         """ Remote CapTP session sends a valid `op:start-session` """
-        message = self.remote.receive_message()
-        self.assertIsInstance(message, OpStartSession)
+        private_key = Ed25519PrivateKey.generate()
+        public_key = CapTPPublicKey.from_private_key(private_key)
+        location = self.netlayer.location
+        location_sig = private_key.sign(
+            syrup_encode(Record(Symbol("my-location"), [location.to_syrup_record()]))
+        )
+        start_session_op = OpStartSession(
+            self.captp_version,
+            public_key,
+            location,
+            location_sig
+        )
+        self.remote.send_message(start_session_op)
 
-        # TODO: Enable when the spec transitions from drafts to published.
-        # self.assertEqual(message.captp_version, "1")
-        self.assertTrue(message.valid)
+        remote_start_session = self.remote.receive_message()
+        self.assertIsInstance(remote_start_session, OpStartSession)
+        self.assertEqual(remote_start_session.captp_version, self.captp_version)
 
     @retry_on_network_timeout
     def test_start_session_with_invalid_version(self):
         """ Remote CapTP session aborts upon invalid version """
-        # First wait for their `op:start-session` message.
-        remote_start_session = self.remote.receive_message()
-        self.assertIsInstance(remote_start_session, OpStartSession)
-
-        # Then send our own `op:start-session` message with an invalid version.
+        # Send our own `op:start-session` message with an invalid version.
         private_key = Ed25519PrivateKey.generate()
         public_key = CapTPPublicKey.from_private_key(private_key)
         location = self.netlayer.location
-        location_sig = private_key.sign(location.to_syrup())
+        location_sig = private_key.sign(
+            syrup_encode(Record(Symbol("my-location"), [location.to_syrup_record()]))
+        )
         start_session_op = OpStartSession(
             "invalid-version-number",
             public_key,
@@ -58,17 +67,13 @@ class OpStartSessionTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_start_session_with_invalid_signature(self):
         """ Remote CapTP session aborts upon invalid location signature """
-        # First wait for their `op:start-session` message.
-        remote_start_session = self.remote.receive_message()
-        self.assertIsInstance(remote_start_session, OpStartSession)
-
-        # Then send our own `op:start-session` message with an invalid signature.
+        # Send our own `op:start-session` message with an invalid signature.
         private_key = Ed25519PrivateKey.generate()
         public_key = CapTPPublicKey.from_private_key(private_key)
         location = self.netlayer.location
         invalid_location_sig = private_key.sign(b"i am invalid")
         start_session_op = OpStartSession(
-            remote_start_session.captp_version,
+            self.captp_version,
             public_key,
             location,
             invalid_location_sig

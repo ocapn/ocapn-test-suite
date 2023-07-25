@@ -55,7 +55,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
 
         # Create a gifter and exporter sessions
         self.g2r_session = self.remote
-        self.g2r_session.setup_session()
+        self.g2r_session.setup_session(self.captp_version)
 
         # Get the greeter
         self.g2r_greeter = self.g2r_session.fetch_object(b"VMDDd1voKWarCe2GvgLbxbVFysNzRPzx")
@@ -97,7 +97,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
 
         # The receiver should connect to us
         self.e2r_session = self.other_netlayer.accept()
-        self.e2r_session.setup_session()
+        self.e2r_session.setup_session(self.captp_version)
 
         # The receiver should then create their own desc:handoff-receive and connect to the exporter
         # Lets get their bootstrap object and give them ours.
@@ -147,7 +147,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
 
         # The receiver should connect to us
         self.e2r_session = self.other_netlayer.accept()
-        self.e2r_session.setup_session()
+        self.e2r_session.setup_session(self.captp_version)
 
         # The receiver should then create their own desc:handoff-receive and connect to the exporter
         # Lets get their bootstrap object and give them ours.
@@ -191,9 +191,9 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 
         # Create a gifter and exporter sessions
         self.g2e_session = self.remote
-        self.g2e_session.setup_session()
+        self.g2e_session.setup_session(self.captp_version)
         self.r2e_session = self.other_netlayer.connect(self.ocapn_uri)
-        self.r2e_session.setup_session()
+        self.r2e_session.setup_session(self.captp_version)
 
         # Since we're both the gifter and exporter, let's just mimic a connection
         self.g2r_pubkey, self.g2r_privkey, self.r2g_pubkey, self.r2g_privkey = self._generate_two_keypairs()
@@ -371,9 +371,9 @@ class HandoffRemoteAsGifter(HandoffTestCase):
 
         # Create a gifter and exporter sessions
         self.r2g_session = self.remote
-        self.r2g_session.setup_session()
+        self.r2g_session.setup_session(self.captp_version)
         self.e2g_session = self.other_netlayer.connect(self.ocapn_uri)
-        self.e2g_session.setup_session()
+        self.e2g_session.setup_session(self.captp_version)
 
         # Since we're both the gifter and exporter, let's just mimic a connection
         self.r2e_pubkey, self.r2e_privkey, self.e2r_pubkey, self.e2r_privkey = self._generate_two_keypairs()

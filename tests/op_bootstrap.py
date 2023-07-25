@@ -23,7 +23,7 @@ class OpBootstrapTest(CapTPTestCase):
     @retry_on_network_timeout
     def test_op_bootstrap(self):
         """ Check we can fetch the bootstrap object """
-        self.remote.setup_session()
+        self.remote.setup_session(self.captp_version)
 
         bootstrap_op = OpBootstrap(0, self.remote.next_import_object)
         self.remote.send_message(bootstrap_op)

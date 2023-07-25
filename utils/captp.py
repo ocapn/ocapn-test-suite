@@ -36,13 +36,8 @@ class CapTPSession:
 
         self.remote_seen_handoff_counts = set()
 
-    def setup_session(self):
+    def setup_session(self, captp_version):
         """ Sets up the session by sending a `op:start-sesion` and verifying theirs """
-        # Get their `op:start-session` message
-        remote_start_session = self.receive_message()
-        assert isinstance(remote_start_session, captp_types.OpStartSession)
-        self.remote_public_key = remote_start_session.session_pubkey
-
         self.private_key = Ed25519PrivateKey.generate()
         self.public_key = captp_types.CapTPPublicKey.from_private_key(self.private_key)
 
@@ -53,12 +48,17 @@ class CapTPSession:
         ))
         location_sig = self.private_key.sign(encoded_my_location)
         start_session_op = captp_types.OpStartSession(
-            remote_start_session.captp_version,
+            captp_version,
             self.public_key,
             self.location,
             location_sig
         )
         self.send_message(start_session_op)
+
+        # Get their `op:start-session` message
+        remote_start_session = self.receive_message()
+        assert isinstance(remote_start_session, captp_types.OpStartSession)
+        self.remote_public_key = remote_start_session.session_pubkey
 
     def close(self):
         """ Aborts the connection and closes the socket """
