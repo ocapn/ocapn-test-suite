@@ -19,12 +19,15 @@ from contrib.syrup import Symbol
 from utils.ocapn_uris import OCapNMachine
 from utils.test_suite import CapTPTestRunner
 from netlayers.onion import OnionNetlayer
+from netlayers.tcp import TCPNetlayer
 
 
 def setup_netlayer(ocapn_machine):
     """ Setup the netlayer for the provided OCapN machine """
     if ocapn_machine.transport == Symbol("onion"):
         return OnionNetlayer()
+    elif ocapn_machine.transport == Symbol("tcp"):
+        return TCPNetlayer()
     else:
         raise ValueError(f"Unsupported transport layer: {ocapn_machine.transport}")
 
