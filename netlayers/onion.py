@@ -21,7 +21,6 @@ from typing import Tuple
 from contrib import syrup
 from netlayers.base import CapTPSocket, Netlayer
 
-import stem.process
 from utils.ocapn_uris import OCapNMachine
 from utils.captp import CapTPSession
 
@@ -117,6 +116,7 @@ class OnionNetlayer(Netlayer):
     PORT = 9045
 
     def __init__(self):
+        import stem.process
         self._connections = []
 
         # Create a temp directory for us to use for tor
