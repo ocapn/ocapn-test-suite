@@ -23,15 +23,31 @@ from utils.captp import CapTPSession
 
 class TCPNetlayer(Netlayer):
 
-    def __init__(self, listen_address="0.0.0.0", listen_port=22045, public_address="0.0.0.0", public_port=22045):
-        self.address, self.port = listen_address, listen_port
-        self.location = OCapNMachine(syrup.Symbol("tcp"), f"{public_address}:{public_port}", False)
+    def __init__(self, 
+        listen_address="0.0.0.0", 
+        listen_port=22045, 
+        public_address="0.0.0.0", 
+        public_port=22045, 
+        autoport=True
+    ):
+        self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Trivial search for a next open port
+        if autoport:
+            while True:
+                try:
+                    self.server_sock.bind((listen_address, listen_port))
+                    break
+                except OSError as err:
+                    print(err)
+                    listen_port += 1
+        else:
+            self.server_sock.bind((listen_address, listen_port))
 
         self._connections = []
-
-        self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_sock.bind((listen_address, listen_port))
-
+      
+        self.address, self.port = listen_address, listen_port
+        self.location = OCapNMachine(syrup.Symbol("tcp"), f"{public_address}:{public_port}", False)
 
     def __del__(self):
         self.shutdown()
