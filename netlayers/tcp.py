@@ -37,7 +37,6 @@ class TCPNetlayer(Netlayer):
                     self.server_sock.bind((listen_address, listen_port))
                     break
                 except OSError as err:
-                    print(err)
                     listen_port += 1
         else:
             self.server_sock.bind((listen_address, listen_port))
