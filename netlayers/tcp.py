@@ -26,8 +26,6 @@ class TCPNetlayer(Netlayer):
     def __init__(self, 
         listen_address="0.0.0.0", 
         listen_port=22045, 
-        public_address="0.0.0.0", 
-        public_port=22045, 
         autoport=True
     ):
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,7 +45,7 @@ class TCPNetlayer(Netlayer):
         self._connections = []
       
         self.address, self.port = listen_address, listen_port
-        self.location = OCapNMachine(syrup.Symbol("tcp"), f"{public_address}:{public_port}", False)
+        self.location = OCapNMachine(syrup.Symbol("tcp"), f"{listen_address}:{listen_port}", False)
 
     def __del__(self):
         self.shutdown()
