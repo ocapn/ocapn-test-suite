@@ -25,7 +25,8 @@ class TCPNetlayer(Netlayer):
 
     def __init__(self, 
         listen_address="127.0.0.1", 
-        listen_port=22045, 
+        listen_port=22045,
+        listen_queue_size=100,
         autoport=True
     ):
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,6 +41,8 @@ class TCPNetlayer(Netlayer):
                     listen_port += 1
         else:
             self.server_sock.bind((listen_address, listen_port))
+
+        self.server_sock.listen(listen_queue_size)
 
         self._connections = []
       
