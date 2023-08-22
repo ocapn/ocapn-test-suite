@@ -97,6 +97,8 @@ class CapTPSocket(socket.socket):
 class Netlayer(ABC):
     """ Base class for all netlayers """
 
+    location: OCapNMachine
+
     @abstractmethod
     def connect(self, ocapn_machine: OCapNMachine) -> CapTPSession:
         """ Connect to a remote machine returning a connection """
