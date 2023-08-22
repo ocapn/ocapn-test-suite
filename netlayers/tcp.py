@@ -24,7 +24,7 @@ from utils.captp import CapTPSession
 class TCPNetlayer(Netlayer):
 
     def __init__(self, 
-        listen_address="0.0.0.0", 
+        listen_address="127.0.0.1", 
         listen_port=22045, 
         autoport=True
     ):
