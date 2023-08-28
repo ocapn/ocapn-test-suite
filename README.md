@@ -59,6 +59,11 @@ This takes a single argument which is a reference to another object. Upon
 receipt of a message it should send the greeting "Hello" (string) to the object
 referenced by the argument.
 
+This greeting should be sent as a `op:deliver` (**not** `op:deliver-only`) and
+the resulting promise should be discarded (no references retained). The
+implementation should (if possible) try to arrange so that the GC is run
+upon resolution of the promise.
+
 This should be available at the swiss num: "VMDDd1voKWarCe2GvgLbxbVFysNzRPzx"
 
 ### Promise resolver
