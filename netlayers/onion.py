@@ -153,7 +153,7 @@ class OnionNetlayer(Netlayer):
 
         connection = CapTPSocket.from_socket(onion_sock)
         self._connections.append(connection)
-        return CapTPSession(connection, self.location)
+        return CapTPSession(connection, self.location, is_outbound=True)
 
     def accept(self, timeout=120) -> CapTPSession:
         """ Blocks until a CapTP connection is received, returning the socket """
@@ -161,7 +161,7 @@ class OnionNetlayer(Netlayer):
         sock, addr = self._incoming_control_socket.accept()
         connection = CapTPSocket.from_socket(sock)
         self._connections.append(connection)
-        return CapTPSession(connection, self.location)
+        return CapTPSession(connection, self.location, is_outbound=False)
 
     def _read_and_expect(self, socket, expected):
         """ Read from a socket and expect a specific value """
