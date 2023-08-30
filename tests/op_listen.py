@@ -15,7 +15,7 @@
 from typing import Tuple
 
 from contrib.syrup import Symbol
-from utils.test_suite import CapTPTestCase, retry_on_network_timeout
+from utils.test_suite import CapTPTestCase
 from utils.captp_types import OpDeliver, OpDeliverOnly, DescImportObject, OpListen
 
 
@@ -46,9 +46,9 @@ class OpListenTest(CapTPTestCase):
         vow, resolver = response.args[1]
         return vow, resolver
 
-    @retry_on_network_timeout
     def test_op_listen_to_promise_and_fulfill(self):
         """ Notified when a promise is fulfilled """
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
 
         # First lets get a promise and resolver
@@ -74,9 +74,9 @@ class OpListenTest(CapTPTestCase):
         response = self.remote.expect_promise_resolution(listen_op.exported_resolve_me_desc)
         self.assertEqual(response.args, [Symbol("fulfill"), resolved_promise_with])
 
-    @retry_on_network_timeout
     def test_op_listen_to_promise_and_break(self):
         """ Notified when a promise is broken """
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
 
         # First lets get a promise and resolver
@@ -102,9 +102,9 @@ class OpListenTest(CapTPTestCase):
         response = self.remote.expect_promise_resolution(listen_op.exported_resolve_me_desc)
         self.assertEqual(response.args, [Symbol("break"), err_symbol])
 
-    @retry_on_network_timeout
     def test_op_listen_already_has_answer(self):
         """ Notified when listening on a resolved promise """
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
 
         # First lets get a promise and resolver

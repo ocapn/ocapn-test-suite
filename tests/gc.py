@@ -15,7 +15,7 @@
 import time
 
 from contrib.syrup import Symbol
-from utils.test_suite import CapTPTestCase, retry_on_network_timeout
+from utils.test_suite import CapTPTestCase
 from utils.captp_types import OpGcExport, OpGcAnswer, OpDeliverOnly
 
 class GCTestCase(CapTPTestCase):
@@ -37,9 +37,9 @@ class GCTestCase(CapTPTestCase):
 class OpGcExportTest(GCTestCase):
     """ `op:gc-export` - Garbage Collection for normal object exports """
 
-    @retry_on_network_timeout
     def test_gc_export_emitted_single_object(self):
         """ op:gc-export is emitted for an object """
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
 
         echo_gc_refr = self.remote.fetch_object(b"IO58l1laTyhcrgDKbEzFOO32MDd6zE5w")
@@ -59,9 +59,9 @@ class OpGcExportTest(GCTestCase):
         self.assertEqual(gc_msg.export_position, a_local_obj.position)
         self.assertEqual(gc_msg.wire_delta, 1)
 
-    @retry_on_network_timeout
     def test_gc_export_with_multiple_refrences(self):
         """ op:gc-export has correct wire-delta for multiple references in the same message """
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
 
         echo_gc_refr = self.remote.fetch_object(b"IO58l1laTyhcrgDKbEzFOO32MDd6zE5w")
@@ -90,9 +90,9 @@ class OpGcExportTest(GCTestCase):
 
         self.assertEqual(seen_wire_delta, ref_count)
 
-    @retry_on_network_timeout
     def test_gc_export_with_multiple_refrences_in_different_messages(self):
         """ op:gc-export has correct wire-delta for multiple references in different messages """
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
 
         echo_gc_refr = self.remote.fetch_object(b"IO58l1laTyhcrgDKbEzFOO32MDd6zE5w")
@@ -126,8 +126,8 @@ class OpGcExportTest(GCTestCase):
 class OpGcAnswerTest(GCTestCase):
     """ `op:gc-answer` - Garbage Collection for promises (answers) """
 
-    @retry_on_network_timeout
     def test_gc_answer(self):
+        self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
         greeter_ref = self.remote.fetch_object(b"VMDDd1voKWarCe2GvgLbxbVFysNzRPzx")
 
@@ -149,6 +149,6 @@ class OpGcAnswerTest(GCTestCase):
         self.remote.send_message(greeting_reply)
 
         gc_msg = self._expect_gc_for_position(OpGcAnswer, greeting_op.answer_position)
-        
+
         self.assertIsInstance(gc_msg, OpGcAnswer)
         self.assertEqual(gc_msg.answer_position, greeting_op.answer_position)

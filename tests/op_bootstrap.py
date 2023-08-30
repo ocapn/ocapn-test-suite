@@ -13,14 +13,13 @@
 # limitations under the License.
 
 from contrib.syrup import Symbol
-from utils.test_suite import CapTPTestCase, retry_on_network_timeout
+from utils.test_suite import CapTPTestCase
 from utils.captp_types import OpBootstrap, OpDeliver, OpDeliverOnly, DescImportObject
 
 
 class OpBootstrapTest(CapTPTestCase):
     """ `op:bootstrap` - fetching the bootstrap object """
 
-    @retry_on_network_timeout
     def test_op_bootstrap(self):
         """ Check we can fetch the bootstrap object """
         self.remote.setup_session(self.captp_version)

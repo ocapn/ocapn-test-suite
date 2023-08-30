@@ -28,10 +28,6 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 class HandoffTestCase(CapTPTestCase):
     """ CapTP test case with two netlayer instances for testing handoffs """
 
-    def setUp(self) -> None:
-        super().setUp()
-        self.other_netlayer = self._create_new_netlayer()
-
     def _create_new_netlayer(self):
         netlayer_class = type(self.netlayer)
         return netlayer_class()
@@ -50,11 +46,12 @@ class HandoffTestCase(CapTPTestCase):
 class HandoffRemoteAsReciever(HandoffTestCase):
     """ Third party Handoffs: Receiver """
 
+    @retry_on_network_timeout
     def setUp(self, *args, **kwargs):
-        super().setUp(*args, **kwargs)
+        self.other_netlayer = self._create_new_netlayer()
 
         # Create a gifter and exporter sessions
-        self.g2r_session = self.remote
+        self.g2r_session = self.netlayer.connect(self.ocapn_uri)
         self.g2r_session.setup_session(self.captp_version)
 
         # Get the greeter
@@ -63,7 +60,6 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         # Since we're both the gifter and exporter, let's just mimic a connection
         self.g2e_pubkey, self.g2e_privkey, self.e2g_pubkey, self.e2g_privkey = self._generate_two_keypairs()
 
-    @retry_on_network_timeout
     def make_valid_handoff(self, gift_id=b"my-gift"):
         # This isn't how real IDs are generated, but it's good enough for testing
         gifter_exporter_session_id = hashlib.sha256(b"Gifter <-> exporter session ID").digest()
@@ -82,7 +78,6 @@ class HandoffRemoteAsReciever(HandoffTestCase):
             self.g2e_privkey.sign(handoff_give.to_syrup())
         )
 
-    @retry_on_network_timeout
     def test_valid_handoff_without_prior_connection(self):
         """ Valid handoff give without prior connection """
         signed_handoff_give = self.make_valid_handoff()
@@ -132,7 +127,6 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         # Check the session ID is what we expect it to be
         self.assertEqual(handoff_receive.receiving_session, self.g2r_session.id)
 
-    @retry_on_network_timeout
     def test_valid_handoff_with_prior_connection(self):
         """ Valid handoff-give, with prior connection """
         signed_handoff_give = self.make_valid_handoff()
@@ -186,11 +180,12 @@ class HandoffRemoteAsReciever(HandoffTestCase):
 class HandoffRemoteAsExporter(HandoffTestCase):
     """ Third party handoffs: Exporter """
 
+    @retry_on_network_timeout
     def setUp(self, *args, **kwargs):
-        super().setUp(*args, **kwargs)
+        self.other_netlayer = self._create_new_netlayer()
 
         # Create a gifter and exporter sessions
-        self.g2e_session = self.remote
+        self.g2e_session = self.netlayer.connect(self.ocapn_uri)
         self.g2e_session.setup_session(self.captp_version)
         self.r2e_session = self.other_netlayer.connect(self.ocapn_uri)
         self.r2e_session.setup_session(self.captp_version)
@@ -228,7 +223,6 @@ class HandoffRemoteAsExporter(HandoffTestCase):
             self.r2g_privkey.sign(handoff_receive.to_syrup())
         )
 
-    @retry_on_network_timeout
     def test_valid_handoff(self):
         """ Valid handoff receive, gift already deposited """
         signed_handoff_give = self.make_valid_handoff()
@@ -255,7 +249,6 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         self.assertEqual(resolved_handoff.args[0], Symbol("fulfill"))
         self.assertIsInstance(resolved_handoff.args[1], captp_types.DescImportObject)
 
-    @retry_on_network_timeout
     def test_valid_handoff_wait_deposit_gift(self):
         """ Valid handoff receive, sending deposite gift later """
         signed_handoff_give = self.make_valid_handoff()
@@ -295,7 +288,6 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         self.assertEqual(resolved_handoff.args[0], Symbol("fulfill"))
         self.assertIsInstance(resolved_handoff.args[1], captp_types.DescImportObject)
 
-    @retry_on_network_timeout
     def test_handoff_receive_invalid_handoff_count(self):
         """ Reject handoff-receive with invalid (already used) handoff count """
         signed_handoff_give = self.make_valid_handoff()
@@ -332,7 +324,6 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         failed_handoff = self.r2e_session.expect_promise_resolution(withdraw_gift_msg.exported_resolve_me_desc)
         self.assertEqual(failed_handoff.args[0], Symbol("break"))
 
-    @retry_on_network_timeout
     def test_handoff_receive_invalid_signature(self):
         """ Reject handoff-receive with invalid signature """
         signed_handoff_give = self.make_valid_handoff()
@@ -366,11 +357,12 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 class HandoffRemoteAsGifter(HandoffTestCase):
     """ Third party handoffs: Gifter """
 
+    @retry_on_network_timeout
     def setUp(self, *args, **kwargs):
-        super().setUp(*args, **kwargs)
+        self.other_netlayer = self._create_new_netlayer()
 
         # Create a gifter and exporter sessions
-        self.r2g_session = self.remote
+        self.r2g_session = self.netlayer.connect(self.ocapn_uri)
         self.r2g_session.setup_session(self.captp_version)
         self.e2g_session = self.other_netlayer.connect(self.ocapn_uri)
         self.e2g_session.setup_session(self.captp_version)
@@ -389,7 +381,6 @@ class HandoffRemoteAsGifter(HandoffTestCase):
             swiss_num
         )
 
-    @retry_on_network_timeout
     def test_provides_valid_handoff_give(self):
         """ Gifter correclty performs handoff and sends valid handoff-give """
         # Message the sturdyref enlivener getting them to enliven an object on the exporter <-> gifter session
