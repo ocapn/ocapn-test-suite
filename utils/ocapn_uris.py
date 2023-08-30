@@ -24,8 +24,8 @@ class OCapNURI:
         return syrup_encode(self.to_syrup_record())
 
 
-class OCapNMachine(OCapNURI):
-    """ <ocapn-machine transport address hints> """
+class OCapNNode(OCapNURI):
+    """ <ocapn-node transport address hints> """
 
     def __init__(self, transport: Symbol, address: str, hints: bool):
         self.transport = transport
@@ -33,7 +33,7 @@ class OCapNMachine(OCapNURI):
         self.hints = hints
 
     def __eq__(self, other):
-        return isinstance(other, OCapNMachine) and self.to_syrup() == other.to_syrup()
+        return isinstance(other, OCapNNode) and self.to_syrup() == other.to_syrup()
 
     @classmethod
     def from_uri(cls, uri: str):
@@ -45,7 +45,7 @@ class OCapNMachine(OCapNURI):
 
     @classmethod
     def from_syrup_record(cls, record: Record):
-        assert record.label == Symbol("ocapn-machine")
+        assert record.label == Symbol("ocapn-node")
         assert len(record.args) == 3
         # TODO: probably want to support hints at a later date
         assert record.args[2] is False, "hints not supported"
@@ -54,7 +54,7 @@ class OCapNMachine(OCapNURI):
 
     def to_syrup_record(self) -> Record:
         return Record(
-            Symbol("ocapn-machine"),
+            Symbol("ocapn-node"),
             [self.transport, self.address, self.hints]
         )
 
@@ -63,10 +63,10 @@ class OCapNMachine(OCapNURI):
 
 
 class OCapNSturdyref(OCapNURI):
-    """ <ocapn-sturdyref ocapn-machine swiss-num> """
+    """ <ocapn-sturdyref ocapn-node swiss-num> """
 
-    def __init__(self, machine, swiss_num):
-        self.machine = machine
+    def __init__(self, node, swiss_num):
+        self.node = node
         self.swiss_num = swiss_num
 
     def __eq__(self, other):
@@ -76,15 +76,15 @@ class OCapNSturdyref(OCapNURI):
     def from_syrup_record(cls, record: Record):
         assert record.label == Symbol("ocapn-sturdyref")
         assert len(record.args) == 2
-        machine = OCapNMachine.from_syrup_record(record.args[0])
-        return cls(machine, record.args[1])
+        node = OCapNNode.from_syrup_record(record.args[0])
+        return cls(node, record.args[1])
 
     def to_syrup_record(self) -> Record:
         return Record(
             Symbol("ocapn-sturdyref"),
-            [self.machine.to_syrup_record(), self.swiss_num]
+            [self.node.to_syrup_record(), self.swiss_num]
         )
 
     def to_uri(self):
-        machine_uri = self.machine.to_uri()
-        return f"{machine_uri}/s/{self.swiss_num}"
+        node_uri = self.node.to_uri()
+        return f"{node_uri}/s/{self.swiss_num}"

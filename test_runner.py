@@ -16,17 +16,17 @@ import argparse
 import sys
 
 from contrib.syrup import Symbol
-from utils.ocapn_uris import OCapNMachine
+from utils.ocapn_uris import OCapNNode
 from utils.test_suite import CapTPTestRunner
 from netlayers.onion import OnionNetlayer
 
 
-def setup_netlayer(ocapn_machine):
-    """ Setup the netlayer for the provided OCapN machine """
-    if ocapn_machine.transport == Symbol("onion"):
+def setup_netlayer(ocapn_node):
+    """ Setup the netlayer for the provided OCapN node """
+    if ocapn_node.transport == Symbol("onion"):
         return OnionNetlayer()
     else:
-        raise ValueError(f"Unsupported transport layer: {ocapn_machine.transport}")
+        raise ValueError(f"Unsupported transport layer: {ocapn_node.transport}")
 
 
 if __name__ == "__main__":
@@ -50,14 +50,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Parse and validate the address
-    ocapn_machine_uri = OCapNMachine.from_uri(args.locator)
+    ocapn_node_uri = OCapNNode.from_uri(args.locator)
 
     try:
-        netlayer = setup_netlayer(ocapn_machine_uri)
+        netlayer = setup_netlayer(ocapn_node_uri)
     except ImportError as e:
         print(f"Unable to setup netlayer: {e}")
         sys.exit(1)
 
-    runner = CapTPTestRunner(netlayer, ocapn_machine_uri, args.captp_version)
+    runner = CapTPTestRunner(netlayer, ocapn_node_uri, args.captp_version)
     suite = runner.loadTests(args.test_module)
     runner.run(suite)

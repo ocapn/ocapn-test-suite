@@ -19,7 +19,7 @@ import string
 
 from contrib.syrup import syrup_encode, Symbol
 from utils.test_suite import CapTPTestCase, retry_on_network_timeout
-from utils.ocapn_uris import OCapNMachine, OCapNSturdyref
+from utils.ocapn_uris import OCapNNode, OCapNSturdyref
 from utils import captp_types
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -37,14 +37,14 @@ class HandoffTestCase(CapTPTestCase):
         return netlayer_class()
 
     def _generate_two_keypairs(self):
-        """ Generate two keypairs to represent those of a session between two machines """
-        machine_a_private_key = Ed25519PrivateKey.generate()
-        machine_b_private_key = Ed25519PrivateKey.generate()
+        """ Generate two keypairs to represent those of a session between two nodes """
+        node_a_private_key = Ed25519PrivateKey.generate()
+        node_b_private_key = Ed25519PrivateKey.generate()
 
-        machine_a_public_key = captp_types.CapTPPublicKey(machine_a_private_key.public_key())
-        machine_b_public_key = captp_types.CapTPPublicKey(machine_b_private_key.public_key())
+        node_a_public_key = captp_types.CapTPPublicKey(node_a_private_key.public_key())
+        node_b_public_key = captp_types.CapTPPublicKey(node_b_private_key.public_key())
 
-        return machine_a_public_key, machine_a_private_key, machine_b_public_key, machine_b_private_key
+        return node_a_public_key, node_a_private_key, node_b_public_key, node_b_private_key
 
 
 class HandoffRemoteAsReciever(HandoffTestCase):

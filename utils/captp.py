@@ -63,7 +63,6 @@ class CapTPSession:
 
     def close(self):
         """ Aborts the connection and closes the socket """
-        self.send_message(captp_types.OpAbort("shutdown"))
         self._bootstrap_object = None
         self.connection.close()
 

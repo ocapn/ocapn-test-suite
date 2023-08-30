@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from contrib import syrup
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from utils.ocapn_uris import OCapNMachine
+from utils.ocapn_uris import OCapNNode
 
 from cryptography.hazmat.primitives import serialization
 
@@ -275,7 +275,7 @@ class DescHandoffGive(CapTPType):
     """
 
     def __init__(self, receiver_key: CapTPPublicKey,
-                 exporter_location: OCapNMachine, session: bytes,
+                 exporter_location: OCapNNode, session: bytes,
                  gifter_side: CapTPPublicKey, gift_id: bytes):
         self.receiver_key = receiver_key
         self.exporter_location = exporter_location
@@ -289,7 +289,7 @@ class DescHandoffGive(CapTPType):
         assert len(record.args) == 5
 
         receiver_key = CapTPPublicKey.from_syrup_record(record.args[0])
-        exporter_location = OCapNMachine.from_syrup_record(record.args[1])
+        exporter_location = OCapNNode.from_syrup_record(record.args[1])
 
         return cls(receiver_key, exporter_location, *record.args[2:])
 
@@ -346,7 +346,7 @@ class DescHandoffReceive(CapTPType):
 class OpStartSession(CapTPType):
     """ <op:start-session captp-version session-pubkey location location-sig> """
     def __init__(self, captp_version: str, session_pubkey: CapTPPublicKey,
-                 location: OCapNMachine, location_sig: bytes):
+                 location: OCapNNode, location_sig: bytes):
         self.captp_version = captp_version
         self.session_pubkey = session_pubkey
         self.location = location
@@ -634,7 +634,7 @@ CAPTP_TYPES = {
     syrup.Symbol("op:gc-answer"): OpGcAnswer,
 
     # OCapN URIs
-    syrup.Symbol("ocapn-machine"): OCapNMachine,
+    syrup.Symbol("ocapn-node"): OCapNNode,
 }
 
 
