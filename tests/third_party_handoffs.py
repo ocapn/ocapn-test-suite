@@ -378,7 +378,7 @@ class HandoffRemoteAsGifter(HandoffTestCase):
         swiss_num = "".join(random.choices(charset, k=32))
         return OCapNSturdyref(
             session.location,
-            swiss_num
+            swiss_num.encode("ascii")
         )
 
     def test_provides_valid_handoff_give(self):
