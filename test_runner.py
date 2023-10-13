@@ -47,6 +47,13 @@ if __name__ == "__main__":
         help="Override the CapTP version sent by the test suite",
         default="1.0"
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="More verbose test printing",
+        default=False,
+        action="store_true"
+    )
     args = parser.parse_args()
 
     # Parse and validate the address
@@ -58,6 +65,8 @@ if __name__ == "__main__":
         print(f"Unable to setup netlayer: {e}")
         sys.exit(1)
 
-    runner = CapTPTestRunner(netlayer, ocapn_node_uri, args.captp_version)
+    verbosity = 2 if args.verbose else 1
+
+    runner = CapTPTestRunner(netlayer, ocapn_node_uri, args.captp_version, verbosity=verbosity)
     suite = runner.loadTests(args.test_module)
     runner.run(suite)
