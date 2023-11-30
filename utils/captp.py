@@ -26,7 +26,6 @@ class CapTPSession:
         self.connection = connection
         self.location = location
         self.is_outbound = is_outbound
-        self._bootstrap_object = None
         self.public_key = None
         self.private_key = None
         self.remote_public_key = None
@@ -36,6 +35,14 @@ class CapTPSession:
         self._next_handoff_count = 0
 
         self.remote_seen_handoff_counts = set()
+
+    @property
+    def bootstrap_object(self):
+        return captp_types.DescImportObject(position=0)
+
+    @property
+    def remote_bootstrap_object(self):
+        return captp_types.DescExport(position=0)
 
     def setup_session(self, captp_version):
         """ Sets up the session by sending a `op:start-sesion` and verifying theirs """
@@ -63,11 +70,17 @@ class CapTPSession:
 
     def close(self):
         """ Aborts the connection and closes the socket """
-        self._bootstrap_object = None
         self.connection.close()
 
     def send_message(self, msg):
         """ Send a message to the remote """
+        # Sending a message to a desc:import-object or desc:import-promise is
+        # likely a bug since those objects live on this test suite, detect this
+        # and throw an error.
+        deliver_ops = (captp_types.OpDeliverOnly, captp_types.OpDeliver)
+        if isinstance(msg, deliver_ops) and isinstance(msg.to, captp_types.DescImport):
+            raise Exception("Attempting to send message to exported object")
+
         self.connection.send_message(msg)
 
     def receive_message(self, timeout=60):
@@ -149,31 +162,10 @@ class CapTPSession:
         self._next_handoff_count += 1
         return count
 
-    def get_bootstrap_object(self, pipeline=False):
-        """" Gets the bootstrap object from the remote session """
-        if self._bootstrap_object is not None:
-            return self._bootstrap_object
-
-        bootstrap_op = captp_types.OpBootstrap(self.next_answer.position, self.next_import_object)
-        self.send_message(bootstrap_op)
-        if pipeline:
-            # Note: If pipelining is usd, the bootstrap object won't actually
-            # get cached as we're wanting to cache the resolved object, not the
-            # promise.
-            return captp_types.DescAnswer(bootstrap_op.answer_position)
-
-        export_desc = bootstrap_op.resolve_me_desc.to_desc_export()
-        message = self.expect_message_to(export_desc)
-        assert message.args[0] == Symbol("fulfill")
-        assert isinstance(message.args[1], captp_types.DescImportObject)
-        self._bootstrap_object = message.args[1].to_desc_export()
-        return self._bootstrap_object
-
     def fetch_object(self, swiss_num, pipeline=False):
         """ Fetches an object from the remote bootstrap object """
-        bootstrap_object = self.get_bootstrap_object(pipeline=pipeline)
         fetch_msg = captp_types.OpDeliver(
-            to=bootstrap_object,
+            to=self.bootstrap_object.to_desc_export(),
             args=[Symbol("fetch"), swiss_num],
             answer_position=self.next_answer.position if pipeline else False,
             resolve_me_desc=self.next_import_object

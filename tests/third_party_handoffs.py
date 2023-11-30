@@ -95,18 +95,9 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         self.e2r_session.setup_session(self.captp_version)
 
         # The receiver should then create their own desc:handoff-receive and connect to the exporter
-        # Lets get their bootstrap object and give them ours.
-        their_bootstrap_op = self.e2r_session.expect_message_type(captp_types.OpBootstrap)
-        our_bootstrap_refr = self.e2r_session.next_import_object
-        bootstrap_reply_msg = captp_types.OpDeliverOnly(
-            their_bootstrap_op.exported_resolve_me_desc,
-            [Symbol("fulfill"), our_bootstrap_refr]
-        )
-        self.e2r_session.send_message(bootstrap_reply_msg)
-
-        # The receiver should then message us with the desc:handoff-receive
+        # Let's wait until we have a message withdrawing the gift from our bootstrap object.
         their_withdraw_gift_msg = self.e2r_session.expect_message_to(
-            (our_bootstrap_refr.to_desc_export(), their_bootstrap_op.vow)
+            self.e2r_session.bootstrap_object.to_desc_export()
         )
         self.assertEqual(their_withdraw_gift_msg.args[0], Symbol("withdraw-gift"))
 
@@ -144,18 +135,8 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         self.e2r_session.setup_session(self.captp_version)
 
         # The receiver should then create their own desc:handoff-receive and connect to the exporter
-        # Lets get their bootstrap object and give them ours.
-        their_bootstrap_op = self.e2r_session.expect_message_type(captp_types.OpBootstrap)
-        our_bootstrap_refr = self.e2r_session.next_import_object
-        bootstrap_reply_msg = captp_types.OpDeliverOnly(
-            their_bootstrap_op.exported_resolve_me_desc,
-            [Symbol("fulfill"), our_bootstrap_refr]
-        )
-        self.e2r_session.send_message(bootstrap_reply_msg)
-
-        # The receiver should then message us with the desc:handoff-receive
         their_withdraw_gift_msg = self.e2r_session.expect_message_to(
-            (our_bootstrap_refr.to_desc_export(), their_bootstrap_op.vow)
+            self.e2r_session.bootstrap_object.to_desc_export()
         )
         self.assertEqual(their_withdraw_gift_msg.args[0], Symbol("withdraw-gift"))
 
@@ -230,7 +211,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 
         # Deposit the gift with the exporter
         deposit_gift_msg = captp_types.OpDeliverOnly(
-            self.g2e_session.get_bootstrap_object(),
+            self.g2e_session.bootstrap_object.to_desc_export(),
             [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
@@ -238,14 +219,16 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         # Withdraw the gift from the exporter
         signed_handoff_receive = self.make_valid_handoff_receive(signed_handoff_give)
         withdraw_gift_msg = captp_types.OpDeliver(
-            self.r2e_session.get_bootstrap_object(),
+            self.r2e_session.bootstrap_object.to_desc_export(),
             [Symbol("withdraw-gift"), signed_handoff_receive],
             False,
             self.r2e_session.next_import_object
         )
         self.r2e_session.send_message(withdraw_gift_msg)
 
-        resolved_handoff = self.r2e_session.expect_promise_resolution(withdraw_gift_msg.exported_resolve_me_desc)
+        resolved_handoff = self.r2e_session.expect_promise_resolution(
+            withdraw_gift_msg.exported_resolve_me_desc
+        )
         self.assertEqual(resolved_handoff.args[0], Symbol("fulfill"))
         self.assertIsInstance(resolved_handoff.args[1], captp_types.DescImportObject)
 
@@ -257,7 +240,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         # Withdraw the gift from the exporter
         signed_handoff_receive = self.make_valid_handoff_receive(signed_handoff_give)
         withdraw_gift_msg = captp_types.OpDeliver(
-            self.r2e_session.get_bootstrap_object(),
+            self.r2e_session.bootstrap_object.to_desc_export(),
             [Symbol("withdraw-gift"), signed_handoff_receive],
             False,
             self.r2e_session.next_import_object
@@ -271,7 +254,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 
         # Deposit the gift with the exporter
         deposit_gift_msg = captp_types.OpDeliverOnly(
-            self.g2e_session.get_bootstrap_object(),
+            self.g2e_session.bootstrap_object.to_desc_export(),
             [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
@@ -295,7 +278,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 
         # Deposit the gift with the exporter
         deposit_gift_msg = captp_types.OpDeliverOnly(
-            self.g2e_session.get_bootstrap_object(),
+            self.g2e_session.bootstrap_object.to_desc_export(),
             [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
@@ -303,7 +286,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         # Withdraw the gift from the exporter (first time)
         signed_handoff_receive = self.make_valid_handoff_receive(signed_handoff_give)
         withdraw_gift_msg = captp_types.OpDeliver(
-            self.r2e_session.get_bootstrap_object(),
+            self.r2e_session.bootstrap_object.to_desc_export(),
             [Symbol("withdraw-gift"), signed_handoff_receive],
             False,
             self.r2e_session.next_import_object
@@ -331,7 +314,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 
         # Deposit the gift with the exporter
         deposit_gift_msg = captp_types.OpDeliverOnly(
-            self.g2e_session.get_bootstrap_object(),
+            self.g2e_session.bootstrap_object.to_desc_export(),
             [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
@@ -342,7 +325,7 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         # Change the certificate to be invalid
         signed_handoff_receive.signature = self.g2r_privkey.sign(b"this signature is invalid")
         withdraw_gift_msg = captp_types.OpDeliver(
-            self.r2e_session.get_bootstrap_object(),
+            self.r2e_session.bootstrap_object.to_desc_export(),
             [Symbol("withdraw-gift"), signed_handoff_receive],
             False,
             self.r2e_session.next_import_object
@@ -393,17 +376,10 @@ class HandoffRemoteAsGifter(HandoffTestCase):
         )
         self.r2g_session.send_message(enliven_msg)
 
-        # The gifter should try and get the bootstrap object and find the object at the sturdyref
-        e2g_bootstrap_obj = self.e2g_session.next_import_object
-        bootstrap_op = self.e2g_session.expect_message_type(captp_types.OpBootstrap)
-        bootstrap_reply = captp_types.OpDeliverOnly(
-            bootstrap_op.resolve_me_desc.to_desc_export(),
-            [Symbol("fulfill"), e2g_bootstrap_obj]
-        )
-        self.e2g_session.send_message(bootstrap_reply)
-
         # Now expect the message to get the object
-        fetch_object_msg = self.e2g_session.expect_message_to((e2g_bootstrap_obj.to_desc_export(), bootstrap_op.vow))
+        fetch_object_msg = self.e2g_session.expect_message_to(
+            self.e2g_session.bootstrap_object.to_desc_export()
+        )
         self.assertIsInstance(fetch_object_msg, captp_types.OpDeliver)
         self.assertEqual(fetch_object_msg.args[0], Symbol("fetch"))
         self.assertEqual(fetch_object_msg.args[1], sturdyref.swiss_num)
@@ -424,7 +400,7 @@ class HandoffRemoteAsGifter(HandoffTestCase):
             if expected_gift_deposit_msg is None:
                 try:
                     expected_gift_deposit_msg = self.e2g_session.expect_message_to(
-                        e2g_bootstrap_obj.to_desc_export(),
+                        self.e2g_session.bootstrap_object.to_desc_export(),
                         timeout=5
                     )
                 except TimeoutError:

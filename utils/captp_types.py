@@ -410,40 +410,6 @@ class OpStartSession(CapTPType):
         )
 
 
-class OpBootstrap(CapTPType):
-    """ <op:bootstrap answer-position resolve-me-desc> """
-
-    def __init__(self, answer_position, resolve_me_desc: DescImport):
-        self.answer_position = answer_position
-        self.resolve_me_desc = resolve_me_desc
-
-    @property
-    def vow(self) -> DescAnswer:
-        """ The vow for the bootstrap operation """
-        return DescAnswer(self.answer_position)
-
-    @property
-    def exported_resolve_me_desc(self) -> DescExport:
-        """ The exported resolve-me-desc for the bootstrap operation """
-        return self.resolve_me_desc.to_desc_export()
-
-    @classmethod
-    def from_syrup_record(cls, record: syrup.Record):
-        assert record.label == syrup.Symbol("op:bootstrap")
-        assert len(record.args) == 2
-        resolve_me_desc = decode_captp_message(record.args[1])
-        return cls(record.args[0], resolve_me_desc)
-
-    def to_syrup_record(self) -> syrup.Record:
-        return syrup.Record(
-            syrup.Symbol("op:bootstrap"),
-            [
-                self.answer_position,
-                self.resolve_me_desc.to_syrup_record()
-            ]
-        )
-
-
 class OpListen(CapTPType):
     """ <op:listen to-desc listen-desc> """
 
@@ -625,7 +591,6 @@ CAPTP_TYPES = {
     syrup.Symbol("desc:sig-envelope"): DescSigEnvelope,
 
     syrup.Symbol("op:start-session"): OpStartSession,
-    syrup.Symbol("op:bootstrap"): OpBootstrap,
     syrup.Symbol("op:listen"): OpListen,
     syrup.Symbol("op:deliver-only"): OpDeliverOnly,
     syrup.Symbol("op:deliver"): OpDeliver,

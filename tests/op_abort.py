@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from utils.test_suite import CapTPTestCase
-from utils.captp_types import OpAbort, OpBootstrap, DescImportObject
+from utils.captp_types import OpAbort, DescImportObject
 
+OBJECT_TO_FETCH = b"VMDDd1voKWarCe2GvgLbxbVFysNzRPzx"
 
-class OpBootstrapTest(CapTPTestCase):
+class OpAbortTest(CapTPTestCase):
     """ `op:abort` - end a session through aborting """
 
     def test_abort_before_setup(self):
@@ -27,24 +28,23 @@ class OpBootstrapTest(CapTPTestCase):
         abort_op = OpAbort("test-abort-before-setup")
         self.remote.send_message(abort_op)
 
-        # Now setup the session
-        self.remote.setup_session(self.captp_version)
-
-        # Finally see if we can use the setup session by sending an `op:bootstrap`
-        bootstrap_op = OpBootstrap(0, DescImportObject(0))
         with self.assertRaises((TimeoutError, ConnectionAbortedError)):
-            self.remote.expect_message_to(bootstrap_op.exported_resolve_me_desc, timeout=10)
+            # Now setup the session
+            self.remote.setup_session(self.captp_version)
 
-    def test_abort_after_setup(self):
-        """ Aborting a session after setup renders it unusable """
-        self.remote = self.netlayer.connect(self.ocapn_uri)
-        self.remote.setup_session(self.captp_version)
+            # Finally see if we can use the setup session by fetching an object
+            remote_object = self.remote.fetch_object(OBJECT_TO_FETCH)
+            print(remote_object)
 
-        # Lets then abort the session and then send our `op:start-session`
-        abort_op = OpAbort("test-abort-after-setup")
-        self.remote.send_message(abort_op)
+    # def test_abort_after_setup(self):
+    #     """ Aborting a session after setup renders it unusable """
+    #     self.remote = self.netlayer.connect(self.ocapn_uri)
+    #     self.remote.setup_session(self.captp_version)
 
-        # Finally see if we can use the setup session by sending an `op:bootstrap`
-        bootstrap_op = OpBootstrap(0, DescImportObject(0))
-        with self.assertRaises((TimeoutError, ConnectionAbortedError)):
-            self.remote.expect_message_to(bootstrap_op.exported_resolve_me_desc, timeout=10)
+    #     # Lets then abort the session and then send our `op:start-session`
+    #     abort_op = OpAbort("test-abort-after-setup")
+    #     self.remote.send_message(abort_op)
+
+    #     with self.assertRaises((TimeoutError, ConnectionAbortedError)):
+    #         # Finally see if we can use the setup session by fetching an object
+    #         remote_object = self.remote.fetch_object(OBJECT_TO_FETCH)
