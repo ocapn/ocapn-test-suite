@@ -47,7 +47,7 @@ Where <color> and <model> are the color and model of the car respectively.
 ### Echo GC
 
 This takes any number of arguments and returns them in the same order it got
-them. Importantely this will be used to test the GC so it should not retain
+them. Importantly this will be used to test the GC so it should not retain
 references and should (if possible) try to arrange so that the run the GC after
 each call.
 
@@ -70,7 +70,7 @@ This should be available at the swiss num: "VMDDd1voKWarCe2GvgLbxbVFysNzRPzx"
 
 This takes no arguments and returns a promise and a resolver. When the resolver
 is sent a message, the first argument should either be the symbol `break` or the
-symbol `fulfill`, the other arguments should be the error or value to resole the
+symbol `fulfill`, the other arguments should be the error or value to resolve the
 promise with.
 
 This should be available at the swiss num: "IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr"
