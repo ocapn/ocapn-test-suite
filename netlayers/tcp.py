@@ -26,24 +26,14 @@ class TCPNetlayer(Netlayer):
     def __init__(self, 
         listen_address="127.0.0.1", 
         listen_port=22045,
-        listen_queue_size=100,
-        autoport=True
+        listen_queue_size=100
     ):
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # Trivial search for a next open port
-        if autoport:
-            while True:
-                try:
-                    self.server_sock.bind((listen_address, listen_port))
-                    break
-                except OSError as err:
-                    listen_port += 1
-        else:
-            self.server_sock.bind((listen_address, listen_port))
-
+        self.server_sock.bind((listen_address, listen_port))
         self.server_sock.listen(listen_queue_size)
-
+        
+        # refreshing both
+        (listen_address, listen_port) = self.server_sock.getsockname()
         self._connections = []
       
         self.address, self.port = listen_address, listen_port
