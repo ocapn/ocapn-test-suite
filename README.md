@@ -47,7 +47,7 @@ Where <color> and <model> are the color and model of the car respectively.
 ### Echo GC
 
 This takes any number of arguments and returns them in the same order it got
-them. Importantely this will be used to test the GC so it should not retain
+them. Importantly this will be used to test the GC so it should not retain
 references and should (if possible) try to arrange so that the run the GC after
 each call.
 
@@ -59,13 +59,18 @@ This takes a single argument which is a reference to another object. Upon
 receipt of a message it should send the greeting "Hello" (string) to the object
 referenced by the argument.
 
+This greeting should be sent as a `op:deliver` (**not** `op:deliver-only`) and
+the resulting promise should be discarded (no references retained). The
+implementation should (if possible) try to arrange so that the GC is run
+upon resolution of the promise.
+
 This should be available at the swiss num: "VMDDd1voKWarCe2GvgLbxbVFysNzRPzx"
 
 ### Promise resolver
 
 This takes no arguments and returns a promise and a resolver. When the resolver
 is sent a message, the first argument should either be the symbol `break` or the
-symbol `fulfill`, the other arguments should be the error or value to resole the
+symbol `fulfill`, the other arguments should be the error or value to resolve the
 promise with.
 
 This should be available at the swiss num: "IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr"
@@ -73,7 +78,7 @@ This should be available at the swiss num: "IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr"
 ## Sturdyref enlivener
 
 This takes a single argument which OCapN sturdyref object. The actor should
-"enliven" (connect to the machine and get a live reference to the object)
+"enliven" (connect to the node and get a live reference to the object)
 the sturdyref and then return that to the messager.
 
 This should be available at the swiss num: "gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB"
@@ -81,3 +86,10 @@ This should be available at the swiss num: "gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB"
 ## Licence
 
 Apache 2.0 License. See the LICENSE file for details.
+
+## Funding
+
+This project is funded through the [NGI Assure Fund](https://nlnet.nl/assure), a fund established by [NLnet](https://nlnet.nl) with financial support from the European Commission's [Next Generation Internet](https://ngi.eu) program. Learn more on the [NLnet project page]( https://nlnet.nl/project/SpritelyOCCapN#ack).
+
+[<img src="https://nlnet.nl/logo/banner.png" alt="NLnet foundation logo" width="20%" />](https://nlnet.nl)
+[<img src="https://nlnet.nl/image/logos/NGIAssure_tag.svg" alt="NGI Assure Logo" width="20%" />](https://nlnet.nl/assure)

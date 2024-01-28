@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from contrib import syrup
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from utils.ocapn_uris import OCapNMachine
+from utils.ocapn_uris import OCapNNode
 
 from cryptography.hazmat.primitives import serialization
 
@@ -275,7 +275,7 @@ class DescHandoffGive(CapTPType):
     """
 
     def __init__(self, receiver_key: CapTPPublicKey,
-                 exporter_location: OCapNMachine, session: bytes,
+                 exporter_location: OCapNNode, session: bytes,
                  gifter_side: CapTPPublicKey, gift_id: bytes):
         self.receiver_key = receiver_key
         self.exporter_location = exporter_location
@@ -289,7 +289,7 @@ class DescHandoffGive(CapTPType):
         assert len(record.args) == 5
 
         receiver_key = CapTPPublicKey.from_syrup_record(record.args[0])
-        exporter_location = OCapNMachine.from_syrup_record(record.args[1])
+        exporter_location = OCapNNode.from_syrup_record(record.args[1])
 
         return cls(receiver_key, exporter_location, *record.args[2:])
 
@@ -346,7 +346,7 @@ class DescHandoffReceive(CapTPType):
 class OpStartSession(CapTPType):
     """ <op:start-session captp-version session-pubkey location location-sig> """
     def __init__(self, captp_version: str, session_pubkey: CapTPPublicKey,
-                 location: OCapNMachine, location_sig: bytes):
+                 location: OCapNNode, location_sig: bytes):
         self.captp_version = captp_version
         self.session_pubkey = session_pubkey
         self.location = location
@@ -407,40 +407,6 @@ class OpStartSession(CapTPType):
             syrup.Symbol("op:start-session"),
             [self.captp_version, self.session_pubkey.to_syrup_record(),
              self.location.to_syrup_record(), encoded_location_sig]
-        )
-
-
-class OpBootstrap(CapTPType):
-    """ <op:bootstrap answer-position resolve-me-desc> """
-
-    def __init__(self, answer_position, resolve_me_desc: DescImport):
-        self.answer_position = answer_position
-        self.resolve_me_desc = resolve_me_desc
-
-    @property
-    def vow(self) -> DescAnswer:
-        """ The vow for the bootstrap operation """
-        return DescAnswer(self.answer_position)
-
-    @property
-    def exported_resolve_me_desc(self) -> DescExport:
-        """ The exported resolve-me-desc for the bootstrap operation """
-        return self.resolve_me_desc.to_desc_export()
-
-    @classmethod
-    def from_syrup_record(cls, record: syrup.Record):
-        assert record.label == syrup.Symbol("op:bootstrap")
-        assert len(record.args) == 2
-        resolve_me_desc = decode_captp_message(record.args[1])
-        return cls(record.args[0], resolve_me_desc)
-
-    def to_syrup_record(self) -> syrup.Record:
-        return syrup.Record(
-            syrup.Symbol("op:bootstrap"),
-            [
-                self.answer_position,
-                self.resolve_me_desc.to_syrup_record()
-            ]
         )
 
 
@@ -625,7 +591,6 @@ CAPTP_TYPES = {
     syrup.Symbol("desc:sig-envelope"): DescSigEnvelope,
 
     syrup.Symbol("op:start-session"): OpStartSession,
-    syrup.Symbol("op:bootstrap"): OpBootstrap,
     syrup.Symbol("op:listen"): OpListen,
     syrup.Symbol("op:deliver-only"): OpDeliverOnly,
     syrup.Symbol("op:deliver"): OpDeliver,
@@ -634,7 +599,7 @@ CAPTP_TYPES = {
     syrup.Symbol("op:gc-answer"): OpGcAnswer,
 
     # OCapN URIs
-    syrup.Symbol("ocapn-machine"): OCapNMachine,
+    syrup.Symbol("ocapn-node"): OCapNNode,
 }
 
 

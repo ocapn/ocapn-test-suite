@@ -21,7 +21,9 @@ from typing import Tuple
 from contrib import syrup
 from netlayers.base import CapTPSocket, Netlayer
 
-from utils.ocapn_uris import OCapNMachine
+import stem.process
+from utils.ocapn_uris import OCapNNode
+
 from utils.captp import CapTPSession
 
 
@@ -144,16 +146,16 @@ class OnionNetlayer(Netlayer):
     def __del__(self):
         self.shutdown()
 
-    def connect(self, ocapn_machine: OCapNMachine) -> CapTPSession:
-        """ Connect to the remote machine """
+    def connect(self, ocapn_node: OCapNNode) -> CapTPSession:
+        """ Connect to the remote node """
         # Finally setup a socket and connect to the CapTP server
-        hidden_service_uri = f"{ocapn_machine.address}.onion"
+        hidden_service_uri = f"{ocapn_node.address}.onion"
         onion_sock = Socks5Proxy(self._unix_socket_path)
         onion_sock.connect(hidden_service_uri, self.PORT)
 
         connection = CapTPSocket.from_socket(onion_sock)
         self._connections.append(connection)
-        return CapTPSession(connection, self.location)
+        return CapTPSession(connection, self.location, is_outbound=True)
 
     def accept(self, timeout=120) -> CapTPSession:
         """ Blocks until a CapTP connection is received, returning the socket """
@@ -161,7 +163,7 @@ class OnionNetlayer(Netlayer):
         sock, addr = self._incoming_control_socket.accept()
         connection = CapTPSocket.from_socket(sock)
         self._connections.append(connection)
-        return CapTPSession(connection, self.location)
+        return CapTPSession(connection, self.location, is_outbound=False)
 
     def _read_and_expect(self, socket, expected):
         """ Read from a socket and expect a specific value """
@@ -177,7 +179,7 @@ class OnionNetlayer(Netlayer):
             if data[-1] == ord("\n"):
                 return data
 
-    def add_hidden_service(self) -> Tuple[CapTPSocket, OCapNMachine]:
+    def add_hidden_service(self) -> Tuple[CapTPSocket, OCapNNode]:
         """ Add a hidden service to the Tor process """
         if self._control_socket is None:
             raise Exception("Cannot add a hidden service after the control socket has been closed")
@@ -213,10 +215,10 @@ class OnionNetlayer(Netlayer):
         incoming_control_socket.bind(ocapn_sock_path)
         incoming_control_socket.listen()
 
-        # Create the OCapNMachine that represents this hidden service
-        ocapn_machine = OCapNMachine(syrup.Symbol("onion"), service_id, False)
+        # Create the OCapNNode that represents this hidden service
+        ocapn_node = OCapNNode(syrup.Symbol("onion"), service_id, False)
 
-        return incoming_control_socket, ocapn_machine
+        return incoming_control_socket, ocapn_node
 
     def shutdown(self):
         """ Shuts down the netlayer """
