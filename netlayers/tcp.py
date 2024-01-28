@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 from contrib import syrup
 from netlayers.base import CapTPSocket, Netlayer
 
-from utils.ocapn_uris import OCapNMachine
+from utils.ocapn_uris import OCapNNode
 from utils.captp import CapTPSession
 
 class TCPNetlayer(Netlayer):
@@ -37,12 +37,12 @@ class TCPNetlayer(Netlayer):
         self._connections = []
       
         self.address, self.port = listen_address, listen_port
-        self.location = OCapNMachine(syrup.Symbol("tcp"), f"{listen_address}:{listen_port}", False)
+        self.location = OCapNNode(syrup.Symbol("tcp"), f"{listen_address}:{listen_port}", False)
 
     def __del__(self):
         self.shutdown()
 
-    def connect(self, ocapn_machine: OCapNMachine) -> CapTPSession:
+    def connect(self, ocapn_machine: OCapNNode) -> CapTPSession:
         """ Connect to the remote machine """
 
         url = urlparse(f"tcp://{ocapn_machine.address}")
