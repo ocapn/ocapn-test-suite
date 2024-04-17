@@ -12,12 +12,14 @@ This repository contains a test suite for CapTP, OCapN netlayers & OCapN URIs, a
 - Tor
 - python-stem (https://stem.torproject.org/)
 
-### TCP netlayer
+### TCP __TESTING__ netlayer
+
+IT IS HIGHLY INSECURE, DO NOT USE IN PRODUCTION.
 
 TCP netlayer streams pure Syrup-encoded data directly, without any encryption or metadata apart from regular CapTP messages.
 It is simple to implement, and should be enough to get you through the tests.
 
-E.g `./test_runner.py 'ocapn://127.0.0.1:22045.tcp'` will try to connect to port 22045 on the local host, and run tests on it.
+E.g `./test_runner.py 'ocapn://127.0.0.1:22045.tcp-testing-only'` will try to connect to port 22045 on the local host, and run tests on it.
 
 ## Testing against an implementation
 

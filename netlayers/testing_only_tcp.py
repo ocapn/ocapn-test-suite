@@ -21,7 +21,16 @@ from netlayers.base import CapTPSocket, Netlayer
 from utils.ocapn_uris import OCapNNode
 from utils.captp import CapTPSession
 
-class TCPNetlayer(Netlayer):
+class TestingOnlyTCPNetlayer(Netlayer):
+    """
+       THIS NETLAYER IS _NOT_ SAFE.
+
+       DO NOT USE FOR PURPOSES OTHER THAN TESTING!
+
+       ALL DATA IS PASSED UNENCRYPTED AND UNCHECKED FOR TAMPERING!
+
+       IT WILL BURN YOUR HOUSE DOWN!
+    """
 
     def __init__(self, 
         listen_address="127.0.0.1", 
@@ -37,7 +46,7 @@ class TCPNetlayer(Netlayer):
         self._connections = []
       
         self.address, self.port = listen_address, listen_port
-        self.location = OCapNNode(syrup.Symbol("tcp"), f"{listen_address}:{listen_port}", False)
+        self.location = OCapNNode(syrup.Symbol("tcp-testing-only"), f"{listen_address}:{listen_port}", False)
 
     def __del__(self):
         self.shutdown()
@@ -45,7 +54,7 @@ class TCPNetlayer(Netlayer):
     def connect(self, ocapn_machine: OCapNNode) -> CapTPSession:
         """ Connect to the remote machine """
 
-        url = urlparse(f"tcp://{ocapn_machine.address}")
+        url = urlparse(f"tcp-testing-only://{ocapn_machine.address}")
 
         loc_socket = socket.socket()
         loc_socket.connect((url.hostname, url.port))
