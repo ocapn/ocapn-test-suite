@@ -97,7 +97,7 @@ class CapTPSocket(socket.socket):
 class Netlayer(ABC):
     """ Base class for all netlayers """
 
-    location: OCapNMachine
+    location: OCapNNode
 
     @abstractmethod
     def connect(self, ocapn_node: OCapNNode) -> CapTPSession:

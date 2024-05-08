@@ -23,20 +23,19 @@ from utils.captp import CapTPSession
 
 class TestingOnlyTCPNetlayer(Netlayer):
     """
-       THIS NETLAYER IS _NOT_ SAFE.
+    THIS NETLAYER IS _NOT_ SAFE. DO NOT USE IN PRODUCTION
 
-       DO NOT USE FOR PURPOSES OTHER THAN TESTING!
-
-       ALL DATA IS PASSED UNENCRYPTED AND UNCHECKED FOR TAMPERING!
-
-       IT WILL BURN YOUR HOUSE DOWN!
+    This netlayer has been designed with simplicity to implement as
+    its primary goal. This netlayer has no security, privacy
+    protections, nor forgery protection. It should not be used outside
+    of testing.
     """
 
     def __init__(self, 
-        listen_address="127.0.0.1", 
-        listen_port=22045,
-        listen_queue_size=100
-    ):
+                 listen_address="127.0.0.1",
+                 # Ask for one to be assigned to us
+                 listen_port=0,
+                 listen_queue_size=100):
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_sock.bind((listen_address, listen_port))
         self.server_sock.listen(listen_queue_size)
@@ -46,15 +45,19 @@ class TestingOnlyTCPNetlayer(Netlayer):
         self._connections = []
       
         self.address, self.port = listen_address, listen_port
-        self.location = OCapNNode(syrup.Symbol("tcp-testing-only"), f"{listen_address}:{listen_port}", False)
+        self.location = OCapNNode(
+            syrup.Symbol("tcp-testing-only"),
+            f"{listen_address}:{listen_port}",
+            False
+        )
 
     def __del__(self):
         self.shutdown()
 
-    def connect(self, ocapn_machine: OCapNNode) -> CapTPSession:
-        """ Connect to the remote machine """
+    def connect(self, ocapn_node: OCapNNode) -> CapTPSession:
+        """ Connect to the remote node """
 
-        url = urlparse(f"tcp-testing-only://{ocapn_machine.address}")
+        url = urlparse(f"tcp-testing-only://{ocapn_node.address}")
 
         loc_socket = socket.socket()
         loc_socket.connect((url.hostname, url.port))
@@ -63,7 +66,7 @@ class TestingOnlyTCPNetlayer(Netlayer):
         self._connections.append(connection)
 
         # FIXME! needs a proper-ish address
-        return CapTPSession(connection, self.location)
+        return CapTPSession(connection, self.location, True)
 
     def accept(self, timeout=5) -> CapTPSession:
         """ Blocks until a CapTP connection is received, returning the socket """
@@ -74,7 +77,7 @@ class TestingOnlyTCPNetlayer(Netlayer):
         connection = CapTPSocket.from_socket(sock)
         self._connections.append(connection)
 
-        return CapTPSession(connection, self.location)
+        return CapTPSession(connection, self.location,  False)
 
     def shutdown(self):
         """ Shuts down the netlayer """

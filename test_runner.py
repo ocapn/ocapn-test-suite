@@ -14,6 +14,7 @@
 
 import argparse
 import sys
+from urllib.parse import urlparse
 
 from contrib.syrup import Symbol
 from utils.ocapn_uris import OCapNNode
@@ -26,8 +27,12 @@ def setup_netlayer(ocapn_node):
     """ Setup the netlayer for the provided OCapN node """
     if ocapn_node.transport == Symbol("onion"):
         return OnionNetlayer()
-    elif ocapn_machine.transport == Symbol("tcp-testing-only"):
-        return TestingOnlyTCPNetlayer()
+    elif ocapn_node.transport == Symbol("tcp-testing-only"):
+        url = urlparse(f"tcp-testing-only://{ocapn_node.address}")
+        if url.port is None:
+            raise Exception("All tcp-testing-only URIs require a port")
+        else:
+            return TestingOnlyTCPNetlayer(url.hostname, url.port)
     else:
         raise ValueError(f"Unsupported transport layer: {ocapn_node.transport}")
 
@@ -38,7 +43,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "locator",
-        help="OCapN Machine locator to test against"
+        help="OCapN Node locator to test against"
     )
     parser.add_argument(
         "--test-module",
