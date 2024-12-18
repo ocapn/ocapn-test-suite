@@ -1,0 +1,11 @@
+[project]
+name = "ocapn-test-suite"
+version = "0.1.0"
+description = "A test suite for CapTP, OCapN netlayers & OCapN URIs"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cryptography>=44.0.0",
+    "stem>=1.8.2",
+    "tor>=1.0.0",
+]
