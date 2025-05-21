@@ -32,7 +32,7 @@ def setup_netlayer(ocapn_node):
         if url.port is None:
             raise Exception("All tcp-testing-only URIs require a port")
         else:
-            return TestingOnlyTCPNetlayer(url.hostname, url.port)
+            return TestingOnlyTCPNetlayer(url.hostname)
     else:
         raise ValueError(f"Unsupported transport layer: {ocapn_node.transport}")
 
