@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import uuid
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from contrib import syrup
 from netlayers.base import CapTPSocket, Netlayer
@@ -31,7 +32,7 @@ class TestingOnlyTCPNetlayer(Netlayer):
     of testing.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  listen_address="127.0.0.1",
                  # Ask for one to be assigned to us
                  listen_port=0,
@@ -39,16 +40,20 @@ class TestingOnlyTCPNetlayer(Netlayer):
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_sock.bind((listen_address, listen_port))
         self.server_sock.listen(listen_queue_size)
-        
+
         # refreshing both
         (listen_address, listen_port) = self.server_sock.getsockname()
         self._connections = []
-      
+
         self.address, self.port = listen_address, listen_port
         self.location = OCapNNode(
             syrup.Symbol("tcp-testing-only"),
-            f"{listen_address}:{listen_port}",
-            False
+            # This should be unique to the node, in most netlayers it'd be
+            # authenticated so a key would work well here. In testing we don't
+            # care, just some unique string will do.
+            uuid.uuid4().hex,
+            {"port": str(listen_port),
+             "host": listen_address}
         )
 
     def __del__(self):
@@ -57,10 +62,8 @@ class TestingOnlyTCPNetlayer(Netlayer):
     def connect(self, ocapn_node: OCapNNode) -> CapTPSession:
         """ Connect to the remote node """
 
-        url = urlparse(f"tcp-testing-only://{ocapn_node.address}")
-
         loc_socket = socket.socket()
-        loc_socket.connect((url.hostname, url.port))
+        loc_socket.connect((ocapn_node.hints["host"], int(ocapn_node.hints["port"])))
 
         connection = CapTPSocket.from_socket(loc_socket)
         self._connections.append(connection)

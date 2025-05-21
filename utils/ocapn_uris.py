@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import urllib.parse
+
 from contrib.syrup import Symbol, Record, syrup_encode
 
 
@@ -27,7 +29,7 @@ class OCapNURI:
 class OCapNNode(OCapNURI):
     """ <ocapn-node transport address hints> """
 
-    def __init__(self, transport: Symbol, address: str, hints: bool):
+    def __init__(self, transport: Symbol, address: str, hints):
         self.transport = transport
         self.address = address
         self.hints = hints
@@ -38,18 +40,16 @@ class OCapNNode(OCapNURI):
     @classmethod
     def from_uri(cls, uri: str):
         """ Converts from the URI fromat ocapn://<address>.<transport> """
-        assert uri.startswith("ocapn://")
-        uri = uri[8:]
-        address, transport = uri.rsplit(".", 1)
-        return cls(Symbol(transport), address, False)
+        parsed = urllib.parse.urlparse(uri)
+        assert parsed.scheme == "ocapn"
+        hints = urllib.parse.parse_qsl(parsed.query, strict_parsing=True)
+        designator, transport = parsed.netloc.rsplit(".", 1)
+        return cls(Symbol(transport), designator, dict(hints))
 
     @classmethod
     def from_syrup_record(cls, record: Record):
         assert record.label == Symbol("ocapn-node")
         assert len(record.args) == 3
-        # TODO: probably want to support hints at a later date
-        assert record.args[2] is False, "hints not supported"
-
         return cls(*record.args)
 
     def to_syrup_record(self) -> Record:
@@ -59,7 +59,8 @@ class OCapNNode(OCapNURI):
         )
 
     def to_uri(self) -> str:
-        return f"ocapn://{self.address}.{self.transport}"
+        query = urllib.parse.urlencode(self.hints, doseq=True) if self.hints else ""
+        return urllib.parse.urlunparse(("ocapn", self.address, "", "", query, ""))
 
 
 class OCapNSturdyref(OCapNURI):
