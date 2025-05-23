@@ -28,11 +28,10 @@ def setup_netlayer(ocapn_node):
     if ocapn_node.transport == Symbol("onion"):
         return OnionNetlayer()
     elif ocapn_node.transport == Symbol("tcp-testing-only"):
-        url = urlparse(f"tcp-testing-only://{ocapn_node.address}")
-        if url.port is None:
+        if ocapn_node.hints.get("port") is None:
             raise Exception("All tcp-testing-only URIs require a port")
         else:
-            return TestingOnlyTCPNetlayer(url.hostname)
+            return TestingOnlyTCPNetlayer(ocapn_node.hints.get("host"))
     else:
         raise ValueError(f"Unsupported transport layer: {ocapn_node.transport}")
 
