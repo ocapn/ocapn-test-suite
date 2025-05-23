@@ -77,4 +77,7 @@ if __name__ == "__main__":
 
     runner = CapTPTestRunner(netlayer, ocapn_node_uri, args.captp_version, verbosity=verbosity)
     suite = runner.loadTests(args.test_module)
-    runner.run(suite)
+    result = runner.run(suite)
+
+    if not result.wasSuccessful():
+        sys.exit(1)
