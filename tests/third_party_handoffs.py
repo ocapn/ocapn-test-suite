@@ -116,7 +116,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         self.assertTrue(signed_handoff_receive.verify(r2g_pubkey))
 
         # Check the session ID is what we expect it to be
-        self.assertEqual(handoff_receive.receiving_session, self.g2r_session.id)
+        self.assertEqual(handoff_receive.receiving_session, self.e2r_session.id)
 
     def test_valid_handoff_with_prior_connection(self):
         """ Valid handoff-give, with prior connection """
@@ -155,7 +155,7 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         self.assertTrue(signed_handoff_receive.verify(r2g_pubkey))
 
         # Check the session ID is what we expect it to be
-        self.assertEqual(handoff_receive.receiving_session, self.g2r_session.id)
+        self.assertEqual(handoff_receive.receiving_session, self.e2r_session.id)
 
 
 class HandoffRemoteAsExporter(HandoffTestCase):
