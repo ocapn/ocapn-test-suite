@@ -17,23 +17,23 @@ import sys
 from urllib.parse import urlparse
 
 from contrib.syrup import Symbol
-from utils.ocapn_uris import OCapNNode
+from utils.ocapn_uris import OCapNPeer
 from utils.test_suite import CapTPTestRunner
 from netlayers.onion import OnionNetlayer
 from netlayers.testing_only_tcp import TestingOnlyTCPNetlayer
 
 
-def setup_netlayer(ocapn_node):
-    """ Setup the netlayer for the provided OCapN node """
-    if ocapn_node.transport == Symbol("onion"):
+def setup_netlayer(ocapn_peer):
+    """ Setup the netlayer for the provided OCapN peer """
+    if ocapn_peer.transport == Symbol("onion"):
         return OnionNetlayer()
-    elif ocapn_node.transport == Symbol("tcp-testing-only"):
-        if ocapn_node.hints.get("port") is None:
+    elif ocapn_peer.transport == Symbol("tcp-testing-only"):
+        if ocapn_peer.hints.get("port") is None:
             raise Exception("All tcp-testing-only URIs require a port")
         else:
-            return TestingOnlyTCPNetlayer(ocapn_node.hints.get("host"))
+            return TestingOnlyTCPNetlayer(ocapn_peer.hints.get("host"))
     else:
-        raise ValueError(f"Unsupported transport layer: {ocapn_node.transport}")
+        raise ValueError(f"Unsupported transport layer: {ocapn_peer.transport}")
 
 
 if __name__ == "__main__":
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "locator",
-        help="OCapN Node locator to test against"
+        help="OCapN Peer locator to test against"
     )
     parser.add_argument(
         "--test-module",
@@ -64,17 +64,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Parse and validate the address
-    ocapn_node_uri = OCapNNode.from_uri(args.locator)
+    ocapn_peer_uri = OCapNPeer.from_uri(args.locator)
 
     try:
-        netlayer = setup_netlayer(ocapn_node_uri)
+        netlayer = setup_netlayer(ocapn_peer_uri)
     except ImportError as e:
         print(f"Unable to setup netlayer: {e}")
         sys.exit(1)
 
     verbosity = 2 if args.verbose else 1
 
-    runner = CapTPTestRunner(netlayer, ocapn_node_uri, args.captp_version, verbosity=verbosity)
+    runner = CapTPTestRunner(netlayer, ocapn_peer_uri, args.captp_version, verbosity=verbosity)
     suite = runner.loadTests(args.test_module)
     result = runner.run(suite)
 
