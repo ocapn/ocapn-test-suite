@@ -26,8 +26,8 @@ class OCapNURI:
         return syrup_encode(self.to_syrup_record())
 
 
-class OCapNNode(OCapNURI):
-    """ <ocapn-node transport address hints> """
+class OCapNPeer(OCapNURI):
+    """ <ocapn-peer transport address hints> """
 
     def __init__(self, transport: Symbol, address: str, hints):
         self.transport = transport
@@ -35,7 +35,7 @@ class OCapNNode(OCapNURI):
         self.hints = hints
 
     def __eq__(self, other):
-        return isinstance(other, OCapNNode) and self.to_syrup() == other.to_syrup()
+        return isinstance(other, OCapNPeer) and self.to_syrup() == other.to_syrup()
 
     @classmethod
     def from_uri(cls, uri: str):
@@ -48,13 +48,13 @@ class OCapNNode(OCapNURI):
 
     @classmethod
     def from_syrup_record(cls, record: Record):
-        assert record.label == Symbol("ocapn-node")
+        assert record.label == Symbol("ocapn-peer")
         assert len(record.args) == 3
         return cls(*record.args)
 
     def to_syrup_record(self) -> Record:
         return Record(
-            Symbol("ocapn-node"),
+            Symbol("ocapn-peer"),
             [self.transport, self.address, self.hints]
         )
 
@@ -64,10 +64,10 @@ class OCapNNode(OCapNURI):
 
 
 class OCapNSturdyref(OCapNURI):
-    """ <ocapn-sturdyref ocapn-node swiss-num> """
+    """ <ocapn-sturdyref ocapn-peer swiss-num> """
 
-    def __init__(self, node, swiss_num):
-        self.node = node
+    def __init__(self, peer, swiss_num):
+        self.peer = peer
         self.swiss_num = swiss_num
 
     def __eq__(self, other):
@@ -77,15 +77,15 @@ class OCapNSturdyref(OCapNURI):
     def from_syrup_record(cls, record: Record):
         assert record.label == Symbol("ocapn-sturdyref")
         assert len(record.args) == 2
-        node = OCapNNode.from_syrup_record(record.args[0])
-        return cls(node, record.args[1])
+        peer = OCapNPeer.from_syrup_record(record.args[0])
+        return cls(peer, record.args[1])
 
     def to_syrup_record(self) -> Record:
         return Record(
             Symbol("ocapn-sturdyref"),
-            [self.node.to_syrup_record(), self.swiss_num]
+            [self.peer.to_syrup_record(), self.swiss_num]
         )
 
     def to_uri(self):
-        node_uri = self.node.to_uri()
-        return f"{node_uri}/s/{self.swiss_num}"
+        peer_uri = self.peer.to_uri()
+        return f"{peer_uri}/s/{self.swiss_num}"

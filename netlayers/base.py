@@ -16,7 +16,7 @@ import socket
 
 from contrib import syrup
 from utils.captp_types import CapTPType, decode_captp_message
-from utils.ocapn_uris import OCapNNode
+from utils.ocapn_uris import OCapNPeer
 from utils.captp import CapTPSession
 
 
@@ -81,13 +81,13 @@ class CapTPSocket(socket.socket):
         return captp_socket
 
     def send_message(self, message):
-        """ Send data to the remote node """
+        """ Send data to the remote peer """
         if isinstance(message, CapTPType):
             message = message.to_syrup()
         self.sendall(message)
 
     def receive_message(self, timeout=120) -> CapTPType:
-        """ Receive data from the remote node """
+        """ Receive data from the remote peer """
         socketio = ReadSocketIO(self, timeout=timeout)
         encoded_message = syrup.syrup_read(socketio)
         assert isinstance(encoded_message, syrup.Record)
@@ -97,14 +97,14 @@ class CapTPSocket(socket.socket):
 class Netlayer(ABC):
     """ Base class for all netlayers """
 
-    location: OCapNNode
+    location: OCapNPeer
 
     @abstractmethod
-    def connect(self, ocapn_node: OCapNNode) -> CapTPSession:
-        """ Connect to a remote node returning a connection """
+    def connect(self, ocapn_peer: OCapNPeer) -> CapTPSession:
+        """ Connect to a remote peer returning a connection """
         pass
 
     @abstractmethod
     def accept(self) -> CapTPSession:
-        """ Accept a connection from a remote node returning a connection """
+        """ Accept a connection from a remote peer returning a connection """
         pass

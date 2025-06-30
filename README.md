@@ -87,7 +87,7 @@ This should be available at the swiss num: "IokCxYmMj04nos2JN1TDoY1bT8dXh6Lr"
 ## Sturdyref enlivener
 
 This takes a single argument which OCapN sturdyref object. The actor should
-"enliven" (connect to the node and get a live reference to the object)
+"enliven" (connect to the peer and get a live reference to the object)
 the sturdyref and then return that to the messager.
 
 This should be available at the swiss num: "gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB"

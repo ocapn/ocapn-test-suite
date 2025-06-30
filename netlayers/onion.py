@@ -22,7 +22,7 @@ from contrib import syrup
 from netlayers.base import CapTPSocket, Netlayer
 
 import stem.process
-from utils.ocapn_uris import OCapNNode
+from utils.ocapn_uris import OCapNPeer
 
 from utils.captp import CapTPSession
 
@@ -146,10 +146,10 @@ class OnionNetlayer(Netlayer):
     def __del__(self):
         self.shutdown()
 
-    def connect(self, ocapn_node: OCapNNode) -> CapTPSession:
-        """ Connect to the remote node """
+    def connect(self, ocapn_peer: OCapNPeer) -> CapTPSession:
+        """ Connect to the remote peer """
         # Finally setup a socket and connect to the CapTP server
-        hidden_service_uri = f"{ocapn_node.address}.onion"
+        hidden_service_uri = f"{ocapn_peer.address}.onion"
         onion_sock = Socks5Proxy(self._unix_socket_path)
         onion_sock.connect(hidden_service_uri, self.PORT)
 
@@ -179,7 +179,7 @@ class OnionNetlayer(Netlayer):
             if data[-1] == ord("\n"):
                 return data
 
-    def add_hidden_service(self) -> Tuple[CapTPSocket, OCapNNode]:
+    def add_hidden_service(self) -> Tuple[CapTPSocket, OCapNPeer]:
         """ Add a hidden service to the Tor process """
         if self._control_socket is None:
             raise Exception("Cannot add a hidden service after the control socket has been closed")
@@ -215,10 +215,10 @@ class OnionNetlayer(Netlayer):
         incoming_control_socket.bind(ocapn_sock_path)
         incoming_control_socket.listen()
 
-        # Create the OCapNNode that represents this hidden service
-        ocapn_node = OCapNNode(syrup.Symbol("onion"), service_id, False)
+        # Create the OCapNPeer that represents this hidden service
+        ocapn_peer = OCapNPeer(syrup.Symbol("onion"), service_id, False)
 
-        return incoming_control_socket, ocapn_node
+        return incoming_control_socket, ocapn_peer
 
     def shutdown(self):
         """ Shuts down the netlayer """

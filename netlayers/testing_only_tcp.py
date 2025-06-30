@@ -19,7 +19,7 @@ from urllib.parse import urlparse, urlunparse
 from contrib import syrup
 from netlayers.base import CapTPSocket, Netlayer
 
-from utils.ocapn_uris import OCapNNode
+from utils.ocapn_uris import OCapNPeer
 from utils.captp import CapTPSession
 
 class TestingOnlyTCPNetlayer(Netlayer):
@@ -46,9 +46,9 @@ class TestingOnlyTCPNetlayer(Netlayer):
         self._connections = []
 
         self.address, self.port = listen_address, listen_port
-        self.location = OCapNNode(
+        self.location = OCapNPeer(
             syrup.Symbol("tcp-testing-only"),
-            # This should be unique to the node, in most netlayers it'd be
+            # This should be unique to the peer, in most netlayers it'd be
             # authenticated so a key would work well here. In testing we don't
             # care, just some unique string will do.
             uuid.uuid4().hex,
@@ -59,11 +59,11 @@ class TestingOnlyTCPNetlayer(Netlayer):
     def __del__(self):
         self.shutdown()
 
-    def connect(self, ocapn_node: OCapNNode) -> CapTPSession:
-        """ Connect to the remote node """
+    def connect(self, ocapn_peer: OCapNPeer) -> CapTPSession:
+        """ Connect to the remote peer """
 
         loc_socket = socket.socket()
-        loc_socket.connect((ocapn_node.hints["host"], int(ocapn_node.hints["port"])))
+        loc_socket.connect((ocapn_peer.hints["host"], int(ocapn_peer.hints["port"])))
 
         connection = CapTPSocket.from_socket(loc_socket)
         self._connections.append(connection)
