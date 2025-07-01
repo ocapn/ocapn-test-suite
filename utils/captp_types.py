@@ -580,6 +580,101 @@ class OpGcAnswer(CapTPType):
             [self.answer_position]
         )
 
+class OpGet(CapTPType):
+    """ <op:get receiver-desc field-name new-answer-pos> """
+
+    def __init__(self, to: DescAnswer | DescImportPromise, field_name: str, new_answer_pos: int):
+        self.to = to
+        self.field_name = field_name
+        self.new_answer_pos = new_answer_pos
+
+    @property
+    def answer(self) -> DescAnswer:
+        """ The answer position, if it exists """
+        return DescAnswer(self.new_answer_pos)
+
+    @classmethod
+    def from_syrup_record(cls, record: syrup.Record):
+        assert record.label == syrup.Symbol("op:get")
+        assert len(record.args) == 3
+        to = decode_captp_message(record.args[0])
+        assert isinstance(to, (DescAnswer, DescImportPromise))
+        field_name = record.args[1]
+        assert isinstance(field_name, str)
+        new_answer_pos = record.args[2]
+        assert isinstance(new_answer_pos, int)
+        return cls(to, field_name, new_answer_pos)
+
+    def to_syrup_record(self) -> syrup.Record:
+        return syrup.Record(
+            syrup.Symbol("op:get"),
+            [
+                self.to.to_syrup_record(),
+                self.field_name,
+                self.new_answer_pos
+            ]
+        )
+
+class OpIndex(CapTPType):
+    """ <op:index to index new-answer-pos> """
+
+    def __init__(self, to: DescAnswer | DescImportPromise, index: int, new_answer_pos: int):
+        self.to = to
+        self.index = index
+        self.new_answer_pos = new_answer_pos
+
+    @property
+    def answer(self) -> DescAnswer:
+        return DescAnswer(self.new_answer_pos)
+
+    @classmethod
+    def from_syrup_record(cls, record: syrup.Record):
+        assert record.label == syrup.Symbol("op:index")
+        assert len(record.args) == 3
+        to = decode_captp_message(record.args[0])
+        assert isinstance(to, (DescAnswer, DescImportPromise))
+        index = record.args[1]
+        assert isinstance(index, int)
+        assert index >= 0, "Index must be a non-negative integer"
+        new_answer_pos = record.args[2]
+        assert isinstance(new_answer_pos, int)
+        return cls(to, index, new_answer_pos)
+
+    def to_syrup_record(self) -> syrup.Record:
+        return syrup.Record(
+            syrup.Symbol("op:index"),
+            [
+                self.to.to_syrup_record(),
+                self.index,
+                self.new_answer_pos
+            ]
+        )
+
+class OpUntag(CapTPType):
+    """ <op:untag to-desc label new-answer-pos> """
+
+    def __init__(self, to: DescExport | DescAnswer, label: str, new_answer_pos: int):
+        self.to = to
+        self.label = label
+        self.new_answer_pos = new_answer_pos
+
+    @classmethod
+    def from_syrup_record(cls, record: syrup.Record):
+        assert record.label == syrup.Symbol("op:untag")
+        assert len(record.args) == 3
+        to = decode_captp_message(record.args[0])
+        assert isinstance(to, (DescExport, DescAnswer))
+        label = record.args[1]
+        assert isinstance(label, str)
+        new_answer_pos = record.args[2]
+        assert isinstance(new_answer_pos, int)
+        return cls(to, label, new_answer_pos)
+
+    def to_syrup_record(self) -> syrup.Record:
+        return syrup.Record(
+            syrup.Symbol("op:untag"),
+            [self.to.to_syrup_record(), self.label, self.new_answer_pos]
+        )
 
 CAPTP_TYPES = {
     syrup.Symbol("desc:import-object"): DescImportObject,
@@ -597,6 +692,9 @@ CAPTP_TYPES = {
     syrup.Symbol("op:abort"): OpAbort,
     syrup.Symbol("op:gc-export"): OpGcExport,
     syrup.Symbol("op:gc-answer"): OpGcAnswer,
+    syrup.Symbol("op:get"): OpGet,
+    syrup.Symbol("op:index"): OpIndex,
+    syrup.Symbol("op:untag"): OpUntag,
 
     # OCapN URIs
     syrup.Symbol("ocapn-peer"): OCapNPeer,
