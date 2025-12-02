@@ -60,6 +60,10 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         # Since we're both the gifter and exporter, let's just mimic a connection
         self.g2e_pubkey, self.g2e_privkey, self.e2g_pubkey, self.e2g_privkey = self._generate_two_keypairs()
 
+    def tearDown(self, *args, **kwargs):
+        self.g2r_session.close()
+        return super().tearDown(*args, **kwargs)
+
     def make_valid_handoff(self, gift_id=b"my-gift"):
         # This isn't how real IDs are generated, but it's good enough for testing
         gifter_exporter_session_id = hashlib.sha256(b"Gifter <-> exporter session ID").digest()
@@ -176,6 +180,11 @@ class HandoffRemoteAsExporter(HandoffTestCase):
 
         # Get the greeter
         self.g2e_greeter_refr = self.g2e_session.fetch_object(b"VMDDd1voKWarCe2GvgLbxbVFysNzRPzx")
+
+    def tearDown(self, *args, **kwargs):
+        self.g2e_session.close()
+        self.r2e_session.close()
+        return super().tearDown(*args, **kwargs)
 
     def make_valid_handoff(self, gift_id=b"my-gift"):
         handoff_give = captp_types.DescHandoffGive(
@@ -355,6 +364,11 @@ class HandoffRemoteAsGifter(HandoffTestCase):
 
         # Get the greeter
         self.r2g_sturdyref_enlivener = self.r2g_session.fetch_object(b"gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB")
+
+    def tearDown(self, *args, **kwargs):
+        self.r2g_session.close()
+        self.e2g_session.close()
+        return super().tearDown(*args, **kwargs)
 
     def random_sturdyref(self, session) -> OCapNSturdyref:
         charset = string.ascii_letters + string.digits
