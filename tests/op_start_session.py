@@ -88,6 +88,49 @@ class OpStartSessionTest(CapTPTestCase):
         expected_abort = self.remote.expect_message_type(OpAbort)
         self.assertIsInstance(expected_abort, OpAbort)
 
+    def test_duplicate_start_session_aborts(self):
+        """ Remote CapTP session aborts upon receiving duplicate op:start-session """
+        self.remote = self.netlayer.connect(self.ocapn_uri)
+        
+        # First, establish a valid session using setup_session
+        self.remote.setup_session(self.captp_version)
+        
+        # Now try to send another op:start-session on the already-established session
+        # This is a protocol violation since op:start-session should only be sent once
+        # during connection establishment
+        private_key = Ed25519PrivateKey.generate()
+        public_key = CapTPPublicKey.from_private_key(private_key)
+        location = self.netlayer.location
+        location_sig = private_key.sign(
+            syrup_encode(Record(Symbol("my-location"), [location.to_syrup_record()]))
+        )
+        duplicate_start_session_op = OpStartSession(
+            self.captp_version,
+            public_key,
+            location,
+            location_sig
+        )
+        self.remote.send_message(duplicate_start_session_op)
+        
+        # The remote should abort the connection due to the duplicate start-session
+        expected_abort = self.remote.expect_message_type(OpAbort)
+        self.assertIsInstance(expected_abort, OpAbort)
+
+    def test_second_connection_after_first_established(self):
+        """ Remote aborts second connection when first connection already established """
+        # Establish first connection
+        self.remote = self.netlayer.connect(self.ocapn_uri)
+        self.remote.setup_session(self.captp_version)
+        
+        # Now try to establish a second separate connection to the same remote
+        # This should be rejected - only one connection between two parties is allowed
+        second_remote = self.netlayer.connect(self.ocapn_uri)
+        second_remote.setup_session(self.captp_version)
+
+        # The remote should abort the second connection since a connection already exists
+        expected_abort = second_remote.expect_message_type(OpAbort)
+        self.assertIsInstance(expected_abort, OpAbort)
+
     def test_crossed_hellos_mitigation_aborts_inbound(self):
         """ Crossed Hellos Problem is detected: inbound connection aborts """
         self.remote = self.netlayer.connect(self.ocapn_uri)
