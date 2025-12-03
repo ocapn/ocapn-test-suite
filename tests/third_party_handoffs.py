@@ -256,11 +256,6 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         )
         self.r2e_session.send_message(withdraw_gift_msg)
 
-        # Send the deposit gift message and wait for a promise to the gifted object
-        resolved_handoff_vow = self.r2e_session.expect_message_to(withdraw_gift_msg.exported_resolve_me_desc)
-        self.assertEqual(resolved_handoff_vow.args[0], Symbol("fulfill"))
-        self.assertIsInstance(resolved_handoff_vow.args[1], captp_types.DescImportPromise)
-
         # Deposit the gift with the exporter
         deposit_gift_msg = captp_types.OpDeliverOnly(
             self.g2e_session.bootstrap_object.to_desc_export(),
@@ -268,17 +263,26 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         )
         self.g2e_session.send_message(deposit_gift_msg)
 
-        # Send `op:listen` to get notified for the handoff vow resolution
-        listen_on_vow_msg = captp_types.OpListen(
-            resolved_handoff_vow.args[1].to_desc_export(),
-            self.r2e_session.next_import_object,
-            True
-        )
-        self.r2e_session.send_message(listen_on_vow_msg)
+        # Wait for a promise to the gifted object
+        initial_response = self.r2e_session.expect_message_to(withdraw_gift_msg.exported_resolve_me_desc)
+        self.assertEqual(initial_response.args[0], Symbol("fulfill"))
 
-        resolved_handoff = self.r2e_session.expect_promise_resolution(listen_on_vow_msg.exported_resolve_me_desc)
-        self.assertEqual(resolved_handoff.args[0], Symbol("fulfill"))
-        self.assertIsInstance(resolved_handoff.args[1], captp_types.DescImportObject)
+        # Clients may return a promise, or the actual object
+        if isinstance(initial_response.args[1], captp_types.DescImportPromise):
+            # Send `op:listen` to get notified for the handoff vow resolution
+            listen_on_vow_msg = captp_types.OpListen(
+                initial_response.args[1].to_desc_export(),
+                self.r2e_session.next_import_object,
+                True
+            )
+            self.r2e_session.send_message(listen_on_vow_msg)
+            second_response = self.r2e_session.expect_promise_resolution(listen_on_vow_msg.exported_resolve_me_desc)
+            self.assertEqual(second_response.args[0], Symbol("fulfill"))
+            resolved_handoff = second_response.args[1]
+        else:
+            resolved_handoff = initial_response.args[1]
+
+        self.assertIsInstance(resolved_handoff, captp_types.DescImportObject)
 
     def test_handoff_receive_invalid_handoff_count(self):
         """ Reject handoff-receive with invalid (already used) handoff count """
