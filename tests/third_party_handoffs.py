@@ -62,6 +62,9 @@ class HandoffRemoteAsReciever(HandoffTestCase):
 
     def tearDown(self, *args, **kwargs):
         self.g2r_session.close()
+        # e2r_session is created in test methods, may not exist if test fails early
+        if self.e2r_session is not None:
+            self.e2r_session.close()
         return super().tearDown(*args, **kwargs)
 
     def make_valid_handoff(self, gift_id=b"my-gift"):
