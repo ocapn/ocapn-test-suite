@@ -70,6 +70,11 @@ class CapTPSession:
 
     def close(self):
         """ Aborts the connection and closes the socket """
+        try:
+            abort_msg = captp_types.OpAbort("session closed")
+            self.connection.send_message(abort_msg)
+        except Exception:
+            pass  # Ignore errors if connection already broken
         self.connection.close()
 
     def send_message(self, msg):
