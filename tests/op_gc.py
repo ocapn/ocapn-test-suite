@@ -15,23 +15,35 @@
 import time
 
 from contrib.syrup import Symbol
-from utils.test_suite import CapTPTestCase
+from utils.test_suite import CapTPTestCase, retry_on_network_timeout
 from utils.captp_types import OpGcExport, OpGcAnswer, OpDeliverOnly
 
 class GCTestCase(CapTPTestCase):
 
-    def _expect_gc_for_position(self, gc_type, position, timeout=30):
+    @retry_on_network_timeout
+    def setUp(self, *args, **kwargs):
+        # These represent the wire_delta provided to us by the other side.
+        self.gc_exports = {}
+        self.gc_answers = set()
+
+    def _handle_gc_message(self, timeout=30):
         while timeout > 0:
             start_time = time.time()
-            gc_msg = self.remote.expect_message_type(gc_type, timeout)
-
-            if isinstance(gc_msg, OpGcExport) and gc_msg.export_position == position:
-                return gc_msg
-
-            if isinstance(gc_msg, OpGcAnswer) and gc_msg.answer_position == position:
-                return gc_msg
-
+            msg = self.remote.expect_message_type((OpGcExport, OpGcAnswer), timeout)
             timeout -= time.time() - start_time
+
+            # Unpack into tables.
+            if isinstance(msg, OpGcExport):
+                for export_position, wire_delta in zip(msg.export_positions, msg.wire_deltas):
+                    self.gc_exports[export_position] = self.gc_exports.get(export_position, 0) + wire_delta
+                return None, timeout
+
+            if isinstance(msg, OpGcAnswer):
+                for answer_position in msg.answer_positions:
+                    self.gc_answers.add(answer_position)
+                return None, timeout
+
+            return msg, timeout
 
 
 class OpGcExportTest(GCTestCase):
@@ -54,10 +66,16 @@ class OpGcExportTest(GCTestCase):
         )
         self.remote.send_message(deliver_only_op)
 
-        gc_msg = self._expect_gc_for_position(OpGcExport, a_local_obj.position)
-        self.assertIsInstance(gc_msg, OpGcExport)
-        self.assertEqual(gc_msg.export_position, a_local_obj.position)
-        self.assertEqual(gc_msg.wire_delta, 1)
+        timeout = 15
+        while timeout > 0:
+            try:
+                other_msg, timeout = self._handle_gc_message(timeout=timeout)
+            except TimeoutError:
+                break
+            # Got expected GC message.
+            if self.gc_exports.get(a_local_obj.position) == 1:
+                return
+        raise Exception("Did not see expected op:gc-export within reasonable time.")
 
     def test_gc_export_with_multiple_refrences(self):
         """ op:gc-export has correct wire-delta for multiple references in the same message """
@@ -77,18 +95,17 @@ class OpGcExportTest(GCTestCase):
         # The GC operation messages could be sent as one or multiple messages, so long as
         # the wire delta of all messages add up to the wire delta we're expecting it's
         # valid behavor.
-        timeout = 30
-        seen_wire_delta = 0
-        while timeout > 0 and seen_wire_delta < ref_count:
-            start_time = time.time()
-            gc_message = self._expect_gc_for_position(OpGcExport, a_local_obj.position, timeout)
-            timeout -= time.time() - start_time
-            if gc_message is None:
-                continue
+        timeout = 15
+        while timeout > 0:
+            try:
+                other_messsages, timeout = self._handle_gc_message(timeout=timeout)
+            except TimeoutError:
+                break
 
-            seen_wire_delta += gc_message.wire_delta
+            if self.gc_exports.get(a_local_obj.position) == ref_count:
+                return
 
-        self.assertEqual(seen_wire_delta, ref_count)
+        raise Exception("Did not see expected op:gc-export within reasonable time.")
 
     def test_gc_export_with_multiple_refrences_in_different_messages(self):
         """ op:gc-export has correct wire-delta for multiple references in different messages """
@@ -109,18 +126,17 @@ class OpGcExportTest(GCTestCase):
         # The GC operation messages could be sent as one or multiple messages, so long as
         # the wire delta of all messages add up to the wire delta we're expecting it's
         # valid behavor.
-        timeout = 30
-        seen_wire_delta = 0
-        while timeout > 0 and seen_wire_delta < ref_count:
-            start_time = time.time()
-            gc_message = self._expect_gc_for_position(OpGcExport, a_local_obj.position, timeout)
-            timeout -= time.time() - start_time
-            if gc_message is None:
-                continue
+        timeout = 15
+        while timeout > 0:
+            try:
+                other_messsages, timeout = self._handle_gc_message(timeout=timeout)
+            except TimeoutError:
+                break
 
-            seen_wire_delta += gc_message.wire_delta
+            if self.gc_exports.get(a_local_obj.position) == ref_count:
+                return
 
-        self.assertEqual(seen_wire_delta, ref_count)
+        raise Exception("Did not see expected op:gc-export within reasonable time.")
 
 
 class OpGcAnswerTest(GCTestCase):
@@ -148,7 +164,12 @@ class OpGcAnswerTest(GCTestCase):
         )
         self.remote.send_message(greeting_reply)
 
-        gc_msg = self._expect_gc_for_position(OpGcAnswer, greeting_op.answer_position)
-
-        self.assertIsInstance(gc_msg, OpGcAnswer)
-        self.assertEqual(gc_msg.answer_position, greeting_op.answer_position)
+        timeout = 15
+        while timeout > 0:
+            try:
+                other_messages, timeout = self._handle_gc_message(timeout=timeout)
+            except TimeoutError:
+                break
+            if greeting_op.answer_position in self.gc_answers:
+                return
+        raise Exception("Did not see expected op:gc-answer within reasonable time.")

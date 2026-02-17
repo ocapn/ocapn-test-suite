@@ -545,9 +545,9 @@ class OpAbort(CapTPType):
 class OpGcExport(CapTPType):
     """ <op:gc-export export-position wire-delta> """
 
-    def __init__(self, export_position: int, wire_delta: int):
-        self.export_position = export_position
-        self.wire_delta = wire_delta
+    def __init__(self, export_positions: [int], wire_deltas: [int]):
+        self.export_positions = export_positions
+        self.wire_deltas = wire_deltas
 
     @classmethod
     def from_syrup_record(cls, record: syrup.Record):
@@ -558,15 +558,15 @@ class OpGcExport(CapTPType):
     def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("op:gc-export"),
-            [self.export_position, self.wire_delta]
+            [self.export_positions, self.wire_deltas]
         )
 
 
 class OpGcAnswer(CapTPType):
     """ <op:gc-answer answer-position> """
 
-    def __init__(self, answer_position: int):
-        self.answer_position = answer_position
+    def __init__(self, answer_positions: [int]):
+        self.answer_positions = answer_positions
 
     @classmethod
     def from_syrup_record(cls, record: syrup.Record):
@@ -577,7 +577,7 @@ class OpGcAnswer(CapTPType):
     def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
             syrup.Symbol("op:gc-answer"),
-            [self.answer_position]
+            [self.answer_positions]
         )
 
 
