@@ -15,7 +15,7 @@
 from contrib.syrup import syrup_encode, Record, Symbol
 from utils import ocapn_uris
 from utils.test_suite import CapTPTestCase
-from utils.captp_types import OpStartSession, OpAbort, CapTPPublicKey, OpDeliverOnly
+from utils.captp_types import OpStartSession, OpAbort, CapTPPublicKey, OpDeliver
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
@@ -109,7 +109,7 @@ class OpStartSessionTest(CapTPTestCase):
         sturdyref = ocapn_uris.OCapNSturdyref(other_session.location, b"my-object")
 
         # Send the message getting the other session to enliven it.
-        msg = OpDeliverOnly(sturdyref_enlivener_refr, [sturdyref.to_syrup_record()])
+        msg = OpDeliver(sturdyref_enlivener_refr, [sturdyref.to_syrup_record()], False, False)
         self.remote.send_message(msg)
 
         # Wait for our inbound connection
@@ -166,7 +166,7 @@ class OpStartSessionTest(CapTPTestCase):
         sturdyref = ocapn_uris.OCapNSturdyref(other_session.location, b"my-object")
 
         # Send the message getting the other session to enliven it.
-        msg = OpDeliverOnly(sturdyref_enlivener_refr, [sturdyref.to_syrup_record()])
+        msg = OpDeliver(sturdyref_enlivener_refr, [sturdyref.to_syrup_record()], False, False)
         self.remote.send_message(msg)
 
         # Wait for our inbound connection

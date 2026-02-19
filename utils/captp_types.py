@@ -439,59 +439,30 @@ class OpListen(CapTPType):
         )
 
 
-class OpDeliverOnly(CapTPType):
-    """ <op:deliver-only to-desc args> """
-
-    def __init__(self, to, args: list):
-        self.to = to
-        self.args = args
-
-    @classmethod
-    def from_syrup_record(cls, record: syrup.Record):
-        assert record.label == syrup.Symbol("op:deliver-only")
-        assert len(record.args) == 2
-        to = decode_captp_message(record.args[0])
-        assert isinstance(to, DescExport) or isinstance(to, DescAnswer)
-        # Convert all arguments to CapTP types, if needed
-        args = [maybe_decode_captp_type(arg) for arg in record.args[1]]
-        return cls(to, args)
-
-    def to_syrup_record(self) -> syrup.Record:
-        # TODO: Should we convert args to syrup records, if needed.
-        encoded_args = []
-        for arg in self.args:
-            if isinstance(arg, CapTPType):
-                encoded_args.append(arg.to_syrup_record())
-            else:
-                encoded_args.append(arg)
-
-        return syrup.Record(
-            syrup.Symbol("op:deliver-only"),
-            [self.to.to_syrup_record(), encoded_args]
-        )
-
-
 class OpDeliver(CapTPType):
     """ <op:deliver to args answer-position resolve-me-desc> """
 
     def __init__(self, to: DescExport | DescAnswer, args: list,
-                 answer_position: int | None, resolve_me_desc: DescImport):
+                 answer_position: int | bool,
+                 resolve_me_desc: DescImport | bool):
         self.to = to
         self.args = args
         self.answer_position = answer_position
         self.resolve_me_desc = resolve_me_desc
 
     @property
-    def vow(self) -> DescAnswer | None:
+    def vow(self) -> DescAnswer | bool:
         """ the DescAnswer (promise) it has a answer_position """
-        if self.answer_position is None:
-            return None
-        return DescAnswer(self.answer_position)
+        if isinstance(self.answer_position, int):
+            return DescAnswer(self.answer_position)
+        return False
 
     @property
-    def exported_resolve_me_desc(self) -> DescExport:
+    def exported_resolve_me_desc(self) -> DescExport | bool:
         """ The resolve_me_desc as the exported object """
-        return self.resolve_me_desc.to_desc_export()
+        if self.resolve_me_desc:
+            return self.resolve_me_desc.to_desc_export()
+        return False
 
     @classmethod
     def from_syrup_record(cls, record: syrup.Record):
@@ -501,7 +472,10 @@ class OpDeliver(CapTPType):
         assert isinstance(to, DescExport) or isinstance(to, DescAnswer)
         args = [maybe_decode_captp_type(arg) for arg in record.args[1]]
         answer_position = record.args[2]
-        resolve_me_desc = decode_captp_message(record.args[3])
+        if record.args[3]:
+            resolve_me_desc = decode_captp_message(record.args[3])
+        else:
+            resolve_me_desc = False
         return cls(to, args, answer_position, resolve_me_desc)
 
     def to_syrup_record(self) -> syrup.Record:
@@ -518,7 +492,7 @@ class OpDeliver(CapTPType):
                 self.to.to_syrup_record(),
                 encoded_args,
                 self.answer_position,
-                self.resolve_me_desc.to_syrup_record()
+                self.resolve_me_desc.to_syrup_record() if self.resolve_me_desc else False
             ]
         )
 
@@ -592,7 +566,6 @@ CAPTP_TYPES = {
 
     syrup.Symbol("op:start-session"): OpStartSession,
     syrup.Symbol("op:listen"): OpListen,
-    syrup.Symbol("op:deliver-only"): OpDeliverOnly,
     syrup.Symbol("op:deliver"): OpDeliver,
     syrup.Symbol("op:abort"): OpAbort,
     syrup.Symbol("op:gc-export"): OpGcExport,
