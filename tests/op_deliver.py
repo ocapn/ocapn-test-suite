@@ -14,13 +14,12 @@
 
 from contrib.syrup import Symbol
 from utils.test_suite import CapTPTestCase
-from utils.captp_types import OpDeliverOnly, OpDeliver
+from utils.captp_types import OpDeliver
 
+class OpDeliverTest(CapTPTestCase):
+    """ `op:deliver` - Send a message to an actor with a reply """
 
-class OpDeliverOnlyTest(CapTPTestCase):
-    """ `op:deliver-only` - Send a mesage to an actor without a reply """
-
-    def test_send_deliver_only(self):
+    def test_send_deliver_no_answer_or_response(self):
         """ Send a message to an actor without a reply """
         self.remote = self.netlayer.connect(self.ocapn_uri)
         self.remote.setup_session(self.captp_version)
@@ -28,16 +27,12 @@ class OpDeliverOnlyTest(CapTPTestCase):
         greeter_refr = self.remote.fetch_object(b"VMDDd1voKWarCe2GvgLbxbVFysNzRPzx")
         # Send a message to the greeter, telling them to greet us.
         object_to_greet = self.remote.next_import_object
-        deliver_only_op = OpDeliverOnly(greeter_refr, [object_to_greet])
+        deliver_only_op = OpDeliver(greeter_refr, [object_to_greet], False, False)
         self.remote.send_message(deliver_only_op)
 
         response = self.remote.expect_message_to(object_to_greet.to_desc_export())
-        self.assertIsInstance(response, (OpDeliverOnly, OpDeliver))
+        self.assertIsInstance(response, OpDeliver)
         self.assertEqual(response.args, ["Hello"])
-
-
-class OpDeliverTest(CapTPTestCase):
-    """ `op:deliver` - Send a message to an actor with a reply """
 
     def test_deliver_with_resolver(self):
         """ Deliver occurs with a response to the resolve me descriptor """
@@ -139,6 +134,6 @@ class OpDeliverTest(CapTPTestCase):
         self.remote.send_message(drive_op)
         response = self.remote.expect_promise_resolution(drive_op.exported_resolve_me_desc)
 
-        self.assertIsInstance(response, (OpDeliver, OpDeliverOnly))
+        self.assertIsInstance(response, OpDeliver)
         self.assertEqual(response.args[0], Symbol("break"))
         self.assertTrue(len(response.args) == 2)

@@ -16,7 +16,7 @@ from typing import Tuple
 
 from contrib.syrup import Symbol
 from utils.test_suite import CapTPTestCase
-from utils.captp_types import OpDeliver, OpDeliverOnly, DescImportObject, OpListen
+from utils.captp_types import OpDeliver, DescImportObject, OpListen
 
 
 class OpListenTest(CapTPTestCase):
@@ -64,9 +64,11 @@ class OpListenTest(CapTPTestCase):
 
         # Resolve the promise
         resolved_promise_with = Symbol("ok")
-        resolve_msg = OpDeliverOnly(
+        resolve_msg = OpDeliver(
             to=resolver.to_desc_export(),
-            args=[Symbol("fulfill"), resolved_promise_with]
+            args=[Symbol("fulfill"), resolved_promise_with],
+            answer_position=False,
+            resolve_me_desc=False
         )
         self.remote.send_message(resolve_msg)
 
@@ -92,9 +94,11 @@ class OpListenTest(CapTPTestCase):
 
         # Break the promise
         err_symbol = Symbol("oh-no")
-        break_msg = OpDeliverOnly(
+        break_msg = OpDeliver(
             to=resolver.to_desc_export(),
-            args=[Symbol("break"), err_symbol]
+            args=[Symbol("break"), err_symbol],
+            answer_position=False,
+            resolve_me_desc=False
         )
         self.remote.send_message(break_msg)
 
@@ -112,9 +116,11 @@ class OpListenTest(CapTPTestCase):
 
         # Lets resolve the promise
         resolved_promise_with = Symbol("ok")
-        resolve_msg = OpDeliverOnly(
+        resolve_msg = OpDeliver(
             to=resolver.to_desc_export(),
-            args=[Symbol("fulfill"), resolved_promise_with]
+            args=[Symbol("fulfill"), resolved_promise_with],
+            answer_position=False,
+            resolve_me_desc=False
         )
         self.remote.send_message(resolve_msg)
 

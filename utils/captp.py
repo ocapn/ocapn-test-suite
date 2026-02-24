@@ -82,8 +82,7 @@ class CapTPSession:
         # Sending a message to a desc:import-object or desc:import-promise is
         # likely a bug since those objects live on this test suite, detect this
         # and throw an error.
-        deliver_ops = (captp_types.OpDeliverOnly, captp_types.OpDeliver)
-        if isinstance(msg, deliver_ops) and isinstance(msg.to, captp_types.DescImport):
+        if isinstance(msg, captp_types.OpDeliver) and isinstance(msg.to, captp_types.DescImport):
             raise Exception("Attempting to send message to exported object")
 
         self.connection.send_message(msg)
@@ -203,7 +202,7 @@ class CapTPSession:
 
         while timeout >= 0:
             start_time = time.time()
-            message = self.expect_message_type((captp_types.OpDeliver, captp_types.OpDeliverOnly), timeout=timeout)
+            message = self.expect_message_type(captp_types.OpDeliver, timeout=timeout)
             end_time = time.time()
             timeout -= end_time - start_time
 
