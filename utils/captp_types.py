@@ -516,8 +516,8 @@ class OpAbort(CapTPType):
         )
 
 
-class OpGcExport(CapTPType):
-    """ <op:gc-export export-position wire-delta> """
+class OpGcExports(CapTPType):
+    """ <op:gc-exports export-positions wire-deltas> """
 
     def __init__(self, export_positions: [int], wire_deltas: [int]):
         self.export_positions = export_positions
@@ -525,32 +525,32 @@ class OpGcExport(CapTPType):
 
     @classmethod
     def from_syrup_record(cls, record: syrup.Record):
-        assert record.label == syrup.Symbol("op:gc-export")
+        assert record.label == syrup.Symbol("op:gc-exports")
         assert len(record.args) == 2
         return cls(*record.args)
 
     def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
-            syrup.Symbol("op:gc-export"),
+            syrup.Symbol("op:gc-exports"),
             [self.export_positions, self.wire_deltas]
         )
 
 
-class OpGcAnswer(CapTPType):
-    """ <op:gc-answer answer-position> """
+class OpGcAnswers(CapTPType):
+    """ <op:gc-answers answer-positions> """
 
     def __init__(self, answer_positions: [int]):
         self.answer_positions = answer_positions
 
     @classmethod
     def from_syrup_record(cls, record: syrup.Record):
-        assert record.label == syrup.Symbol("op:gc-answer")
+        assert record.label == syrup.Symbol("op:gc-answers")
         assert len(record.args) == 1
         return cls(*record.args)
 
     def to_syrup_record(self) -> syrup.Record:
         return syrup.Record(
-            syrup.Symbol("op:gc-answer"),
+            syrup.Symbol("op:gc-answers"),
             [self.answer_positions]
         )
 
@@ -568,8 +568,8 @@ CAPTP_TYPES = {
     syrup.Symbol("op:listen"): OpListen,
     syrup.Symbol("op:deliver"): OpDeliver,
     syrup.Symbol("op:abort"): OpAbort,
-    syrup.Symbol("op:gc-export"): OpGcExport,
-    syrup.Symbol("op:gc-answer"): OpGcAnswer,
+    syrup.Symbol("op:gc-exports"): OpGcExports,
+    syrup.Symbol("op:gc-answers"): OpGcAnswers,
 
     # OCapN URIs
     syrup.Symbol("ocapn-peer"): OCapNPeer,

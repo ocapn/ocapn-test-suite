@@ -16,7 +16,7 @@ import time
 
 from contrib.syrup import Symbol
 from utils.test_suite import CapTPTestCase, retry_on_network_timeout
-from utils.captp_types import OpGcExport, OpGcAnswer, OpDeliver
+from utils.captp_types import OpGcExports, OpGcAnswers, OpDeliver
 
 class GCTestCase(CapTPTestCase):
 
@@ -29,16 +29,16 @@ class GCTestCase(CapTPTestCase):
     def _handle_gc_message(self, timeout=30):
         while timeout > 0:
             start_time = time.time()
-            msg = self.remote.expect_message_type((OpGcExport, OpGcAnswer), timeout)
+            msg = self.remote.expect_message_type((OpGcExports, OpGcAnswers), timeout)
             timeout -= time.time() - start_time
 
             # Unpack into tables.
-            if isinstance(msg, OpGcExport):
+            if isinstance(msg, OpGcExports):
                 for export_position, wire_delta in zip(msg.export_positions, msg.wire_deltas):
                     self.gc_exports[export_position] = self.gc_exports.get(export_position, 0) + wire_delta
                 return None, timeout
 
-            if isinstance(msg, OpGcAnswer):
+            if isinstance(msg, OpGcAnswers):
                 for answer_position in msg.answer_positions:
                     self.gc_answers.add(answer_position)
                 return None, timeout
@@ -46,7 +46,7 @@ class GCTestCase(CapTPTestCase):
             return msg, timeout
 
 
-class OpGcExportTest(GCTestCase):
+class OpGcExportsTest(GCTestCase):
     """ `op:gc-export` - Garbage Collection for normal object exports """
 
     def test_gc_export_emitted_single_object(self):
@@ -130,7 +130,7 @@ class OpGcExportTest(GCTestCase):
         raise Exception("Did not see expected op:gc-export within reasonable time.")
 
 
-class OpGcAnswerTest(GCTestCase):
+class OpGcAnswersTest(GCTestCase):
     """ `op:gc-answer` - Garbage Collection for promises (answers) """
 
     def test_gc_answer(self):
