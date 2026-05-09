@@ -1,0 +1,17 @@
+cabal-version:       2.2
+name:                syrup-hs-bench
+version:             0.1.0.0
+build-type:          Simple
+
+benchmark bench
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     .
+  main-is:            syrup_bench_haskell.hs
+  default-language:   Haskell2010
+  build-depends:
+      base        >=4.12 && <5
+    , bytestring  >=0.10
+    , binary      >=0.8
+    , criterion   ^>=1.6
+    , deepseq
+  ghc-options:        -O2

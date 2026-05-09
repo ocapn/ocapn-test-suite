@@ -314,6 +314,12 @@ node benchmark/syrup_bench_node.mjs
 git clone --depth=1 https://github.com/go-fed/syrup /tmp/go-fed-syrup
 cp benchmark/syrup_bench_go_fed_test.go /tmp/go-fed-syrup/bench_test.go
 cd /tmp/go-fed-syrup && go test -bench=. -benchtime=3s -benchmem
+
+# Haskell (GHC 9.6+, OCapN wire format, self-contained)
+# Requires GHC and cabal (install via ghcup: https://www.haskell.org/ghcup/)
+cd benchmark
+# Copy to temp dir and run (self-contained, no external Syrup library needed)
+cabal run bench --enable-benchmarks -O2
 ```
 
 ### Measured: Node.js 24 (V8) — OCapN wire format
@@ -368,26 +374,54 @@ BenchmarkDecodeRecord   1557 ns/op  (640 B/op, 36 allocs)
 BenchmarkDecodeList100 21741 ns/op (9624 B/op,325 allocs)
 ```
 
+### Measured: Haskell (GHC 9.6.7) — OCapN wire format
+
+Self-contained benchmark using lazy `ByteString` `Builder` for encoding and
+`binary` `Get` monad for decoding. No external Syrup library (the published
+`haskell-preserves` requires significant patching for GHC 9.6 compatibility).
+
+```text
+=== Haskell OCapN Syrup Benchmark (GHC 9.6.7, -O2) ===
+
+Encode int (42)                      202 ns/op  (4,950,495 ops/sec)
+Encode bool (True)                   190 ns/op  (5,263,157 ops/sec)
+Encode double (3.14)                 271 ns/op  (3,690,036 ops/sec)
+Encode bytes (11 b)                  268 ns/op  (3,731,343 ops/sec)
+Encode string (11 b)                 273 ns/op  (3,663,003 ops/sec)
+Encode symbol (op:deliver)           236 ns/op  (4,237,288 ops/sec)
+Encode record (3 args)               677 ns/op  (1,477,104 ops/sec)
+Encode list (100 ints)             11460 ns/op  (87,260 ops/sec)
+
+Decode int (42)                      457 ns/op  (2,188,183 ops/sec)
+Decode bool (True)                   227 ns/op  (4,405,286 ops/sec)
+Decode double (3.14)                 230 ns/op  (4,347,826 ops/sec)
+Decode bytes (11 b)                  424 ns/op  (2,358,490 ops/sec)
+Decode string (11 b)                 461 ns/op  (2,169,197 ops/sec)
+Decode symbol (op:deliver)           458 ns/op  (2,183,406 ops/sec)
+Decode record (3 args)               532 ns/op  (1,879,699 ops/sec)
+Decode list (100 ints)               586 ns/op  (1,706,484 ops/sec)
+```
+
 ### Full cross-implementation comparison (all measured, Apple M3 Max)
 
-| Operation | Zig 0.16 ¹ | Node 24 ² | Go 1.26 ³ | Python 3.12 ² |
-| --------- | ---------: | --------: | --------: | ------------: |
-| Encode int | **8 ns** | 404 ns | 50 ns | 209 ns |
-| Encode bool | — | 182 ns | 19 ns | 178 ns |
-| Encode float64 | — | 184 ns | 24 ns | 267 ns |
-| Encode bytes | — | 624 ns | 99 ns | 281 ns |
-| Encode string | — | 527 ns | 61 ns | 437 ns |
-| Encode symbol | — | 740 ns | 57 ns | 546 ns |
-| Encode record (3 args) | **48 ns** | 2700 ns | 262 ns | 1759 ns |
-| Encode list (100 ints) | 1026 ns | 25916 ns | 5943 ns | ~10,000 ns ⁴ |
-| Decode int | **5 ns** | 129 ns | 294 ns | 953 ns |
-| Decode bool | — | 63 ns | 164 ns | 441 ns |
-| Decode float64 | — | 103 ns | 164 ns | 1223 ns |
-| Decode bytes | — | 153 ns | 454 ns | 1102 ns |
-| Decode string | — | 303 ns | 419 ns | 1018 ns |
-| Decode symbol | — | 333 ns | 435 ns | 1126 ns |
-| Decode record (3 args) | 6105 ns ⁵ | 872 ns | 1557 ns | 5546 ns |
-| Decode list (100 ints) | 13175 ns | 9573 ns | 21741 ns | ~50,000 ns ⁴ |
+| Operation | Zig 0.16 ¹ | Node 24 ² | Go 1.26 ³ | Python 3.12 ² | Haskell 9.6 ⁴ |
+| --------- | ---------: | --------: | --------: | ------------: | --------------: |
+| Encode int | **8 ns** | 404 ns | 50 ns | 209 ns | 202 ns |
+| Encode bool | — | 182 ns | 19 ns | 178 ns | 190 ns |
+| Encode float64 | — | 184 ns | 24 ns | 267 ns | 271 ns |
+| Encode bytes | — | 624 ns | 99 ns | 281 ns | 268 ns |
+| Encode string | — | 527 ns | 61 ns | 437 ns | 273 ns |
+| Encode symbol | — | 740 ns | 57 ns | 546 ns | 236 ns |
+| Encode record (3 args) | **48 ns** | 2700 ns | 262 ns | 1759 ns | 677 ns |
+| Encode list (100 ints) | 1026 ns | 25916 ns | 5943 ns | ~10,000 ns ⁵ | 11460 ns |
+| Decode int | **5 ns** | 129 ns | 294 ns | 953 ns | 457 ns |
+| Decode bool | — | 63 ns | 164 ns | 441 ns | 227 ns |
+| Decode float64 | — | 103 ns | 164 ns | 1223 ns | 230 ns |
+| Decode bytes | — | 153 ns | 454 ns | 1102 ns | 424 ns |
+| Decode string | — | 303 ns | 419 ns | 1018 ns | 461 ns |
+| Decode symbol | — | 333 ns | 435 ns | 1126 ns | 458 ns |
+| Decode record (3 args) | 6105 ns ⁶ | 872 ns | 1557 ns | 5546 ns | 532 ns |
+| Decode list (100 ints) | 13175 ns | 9573 ns | 21741 ns | ~50,000 ns ⁵ | **586 ns** |
 
 **Notes:**
 
@@ -399,22 +433,26 @@ timings; raw decode without arena overhead would be substantially lower.
 ³ `go-fed/syrup` uses old Spritely wire format (`i42e`) — not OCapN-compatible.
 Reflect-based encoder/decoder; alloc-heavy (6–9 allocs per scalar decode).
 
-⁴ Python list-100 timing extrapolated from measured 4-element list (1417 ns
+⁴ Haskell benchmark is self-contained using `binary` `Get`/`Put` with lazy
+`ByteString` `Builder`. No external Syrup library (published `haskell-preserves`
+requires significant GHC 9.6 compatibility patches).
+
+⁵ Python list-100 timing extrapolated from measured 4-element list (1417 ns
 encode, 5303 ns decode) × payload ratio; not a direct measurement.
 
-⁵ Zig `Decode small record` includes full `ArenaAllocator.init()/deinit()`
+⁶ Zig `Decode small record` includes full `ArenaAllocator.init()/deinit()`
 per iteration.  Actual wire-decode work is ~200–400 ns.
 
 ### Architecture analysis
 
-| Dimension | Zig (`zig-syrup`) | Node.js (this bench) | Go (`go-fed`) | Python |
-| --------- | ----------------- | -------------------- | ------------- | ------ |
-| Integer encoding | Stack buf, no alloc | `Buffer.concat` | `strconv` + `[]byte` append | `str().encode()` + concat |
-| Integer decoding | Single-pass pointer | `buf[pos.i++]` index | `bytes.NewReader` + scanner FSM | `io.BytesIO` seek/tell per byte |
-| Allocations (decode int) | 0 (arena) | 0 (GC, tiny) | 6 allocs | GC heap per call |
-| Wire format | OCapN `42+` | OCapN `42+` | Old `i42e` | OCapN `42+` |
-| Record encode | Writes to stack buf | `Buffer.concat` chain | reflect + `[]byte` append | `bytes` concat per field |
-| Dict sort | `dictionaryCanonical` in-place | `Object.keys().sort()` | Not benchmarked | `sorted()` on encoded keys |
+| Dimension | Zig (`zig-syrup`) | Node.js (this bench) | Go (`go-fed`) | Python | Haskell (GHC 9.6) |
+| --------- | ----------------- | -------------------- | ------------- | ------ | ----------------- |
+| Integer encoding | Stack buf, no alloc | `Buffer.concat` | `strconv` + `[]byte` append | `str().encode()` + concat | `Builder` monoid |
+| Integer decoding | Single-pass pointer | `buf[pos.i++]` index | `bytes.NewReader` + scanner FSM | `io.BytesIO` seek/tell per byte | `Get` monad |
+| Allocations (decode int) | 0 (arena) | 0 (GC, tiny) | 6 allocs | GC heap per call | 2–4 allocs |
+| Wire format | OCapN `42+` | OCapN `42+` | Old `i42e` | OCapN `42+` | OCapN `42+` |
+| Record encode | Writes to stack buf | `Buffer.concat` chain | reflect + `[]byte` append | `bytes` concat per field | `Builder` monoid chain |
+| Dict sort | `dictionaryCanonical` in-place | `Object.keys().sort()` | Not benchmarked | `sorted()` on encoded keys | `sortBy` on lazy list |
 
 ### Why Go is faster to encode scalars than Python despite higher allocs
 

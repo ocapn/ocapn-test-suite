@@ -1,0 +1,3 @@
+[submodule "vendor/zig-syrup"]
+	path = vendor/zig-syrup
+	url = https://github.com/plurigrid/zig-syrup.git
