@@ -91,6 +91,16 @@ the sturdyref and then return that to the messager.
 
 This should be available at the swiss num: "gi02I1qghIwPiKGKleCQAOhpy3ZtYRpB"
 
+## Benchmarking
+
+A comprehensive cross-implementation benchmark suite is available in the
+[`benchmark/`](benchmark/) directory. It measures Syrup encoding/decoding
+performance across Python, Zig, Node.js, Go, and Haskell implementations,
+with detailed architecture comparisons.
+
+See [`benchmark/README.md`](benchmark/README.md) for measured results and
+instructions for running benchmarks against your own implementation.
+
 ## Licence
 
 Apache 2.0 License. See the LICENSE file for details.

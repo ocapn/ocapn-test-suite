@@ -11,8 +11,10 @@
 
 function encodeInt(n) {
   if (n === 0n || n === 0) return Buffer.from('0+');
-  const abs = n < 0n ? -n : (typeof n === 'number' ? Math.abs(n) : n);
-  const sign = n < 0n || n < 0 ? '-' : '+';
+  const isBigInt = typeof n === 'bigint';
+  const isNegative = isBigInt ? n < 0n : n < 0;
+  const abs = isNegative ? (isBigInt ? -n : Math.abs(n)) : n;
+  const sign = isNegative ? '-' : '+';
   return Buffer.from(String(abs) + sign);
 }
 
@@ -45,10 +47,11 @@ function encodeList(items) {
 
 function encodeDict(obj) {
   const parts = [Buffer.from('{')];
-  const keys = Object.keys(obj).sort();
-  for (const k of keys) {
-    parts.push(encodeStr(k));
-    parts.push(encode(obj[k]));
+  const keys = Object.keys(obj).map((k) => ({ key: k, encoded: encodeStr(k) }));
+  keys.sort((a, b) => Buffer.compare(a.encoded, b.encoded));
+  for (const { key, encoded } of keys) {
+    parts.push(encoded);
+    parts.push(encode(obj[key]));
   }
   parts.push(Buffer.from('}'));
   return Buffer.concat(parts);
@@ -113,7 +116,11 @@ function decode(buf, pos = { i: 0 }) {
   }
   if (b === 0x7b /* { */) {
     const obj = {};
-    while (buf[pos.i] !== 0x7d) { const k = decode(buf, pos); obj[k] = decode(buf, pos); }
+    while (buf[pos.i] !== 0x7d) {
+      const k = decode(buf, pos);
+      if (typeof k !== 'string') throw new Error('dict key must be string');
+      obj[k] = decode(buf, pos);
+    }
     pos.i++; return obj;
   }
   if (b === 0x23 /* # */) {

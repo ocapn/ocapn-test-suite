@@ -19,7 +19,9 @@ func BenchmarkEncodeInt(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode(int64(42))
+		if err := w.Encode(int64(42)); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -29,7 +31,9 @@ func BenchmarkEncodeString(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode("hello world")
+		if err := w.Encode("hello world"); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -40,7 +44,9 @@ func BenchmarkEncodeBytes(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode(payload)
+		if err := w.Encode(payload); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -50,7 +56,9 @@ func BenchmarkEncodeSymbol(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode(Symbol("op:deliver"))
+		if err := w.Encode(Symbol("op:deliver")); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -60,7 +68,9 @@ func BenchmarkEncodeBool(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode(true)
+		if err := w.Encode(true); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -70,7 +80,9 @@ func BenchmarkEncodeFloat64(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode(float64(3.14))
+		if err := w.Encode(float64(3.14)); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -84,7 +96,9 @@ func BenchmarkEncodeRecord(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode(rec)
+		if err := w.Encode(rec); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -98,7 +112,9 @@ func BenchmarkEncodeList100(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
-		_ = w.Encode(items)
+		if err := w.Encode(items); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -112,7 +128,9 @@ func BenchmarkDecodeInt(b *testing.B) {
 		r := bytes.NewReader(encoded)
 		d := NewDecoder(enc, r)
 		var v int64
-		_ = d.Decode(&v)
+		if err := d.Decode(&v); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -123,7 +141,9 @@ func BenchmarkDecodeString(b *testing.B) {
 		r := bytes.NewReader(encoded)
 		d := NewDecoder(enc, r)
 		var v string
-		_ = d.Decode(&v)
+		if err := d.Decode(&v); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -134,7 +154,9 @@ func BenchmarkDecodeBytes(b *testing.B) {
 		r := bytes.NewReader(encoded)
 		d := NewDecoder(enc, r)
 		var v []byte
-		_ = d.Decode(&v)
+		if err := d.Decode(&v); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -145,7 +167,9 @@ func BenchmarkDecodeSymbol(b *testing.B) {
 		r := bytes.NewReader(encoded)
 		d := NewDecoder(enc, r)
 		var v Symbol
-		_ = d.Decode(&v)
+		if err := d.Decode(&v); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -156,7 +180,9 @@ func BenchmarkDecodeBool(b *testing.B) {
 		r := bytes.NewReader(encoded)
 		d := NewDecoder(enc, r)
 		var v bool
-		_ = d.Decode(&v)
+		if err := d.Decode(&v); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -167,7 +193,9 @@ func BenchmarkDecodeRecord(b *testing.B) {
 		Label:  "op:deliver",
 		Values: []interface{}{int64(1), Symbol("answer"), "hello"},
 	}
-	_ = w.Encode(rec)
+	if err := w.Encode(rec); err != nil {
+		b.Fatal(err)
+	}
 	encoded := make([]byte, buf.Len())
 	copy(encoded, buf.Bytes())
 	b.ResetTimer()
@@ -175,7 +203,9 @@ func BenchmarkDecodeRecord(b *testing.B) {
 		r := bytes.NewReader(encoded)
 		d := NewDecoder(enc, r)
 		var v Record
-		_ = d.Decode(&v)
+		if err := d.Decode(&v); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -186,7 +216,9 @@ func BenchmarkDecodeList100(b *testing.B) {
 	}
 	var buf bytes.Buffer
 	w := NewEncoder(enc, &buf)
-	_ = w.Encode(items)
+	if err := w.Encode(items); err != nil {
+		b.Fatal(err)
+	}
 	encoded := make([]byte, buf.Len())
 	copy(encoded, buf.Bytes())
 	b.ResetTimer()
@@ -194,6 +226,8 @@ func BenchmarkDecodeList100(b *testing.B) {
 		r := bytes.NewReader(encoded)
 		d := NewDecoder(enc, r)
 		var v []interface{}
-		_ = d.Decode(&v)
+		if err := d.Decode(&v); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

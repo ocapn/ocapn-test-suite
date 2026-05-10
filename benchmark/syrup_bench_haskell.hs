@@ -10,11 +10,10 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BB
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary.Get
-import Data.Char (digitToInt, isDigit)
+import Data.Char (isDigit)
 import Data.List (sortBy)
 import Data.Ord (comparing)
-import Data.Word (Word8)
-import Control.DeepSeq (NFData(..), force)
+import Control.DeepSeq (NFData(..))
 
 -- ── Types ───────────────────────────────────────────────────────────────────
 
@@ -62,7 +61,7 @@ encodeVal (SList xs)     =
 encodeVal (SDict kvs)    =
   BB.char8 '{' <>
   mconcat [ encodeVal (SStr k) <> encodeVal v
-          | (k,v) <- sortBy (comparing fst) kvs ] <>
+          | (k,v) <- sortBy (comparing (encode . SStr . fst)) kvs ] <>
   BB.char8 '}'
 encodeVal (SRecord tag args) =
   BB.char8 '<' <> encodeVal (SSym tag) <>
@@ -99,24 +98,15 @@ getIntOrLen = do
 
 getDigits :: Get String
 getDigits = do
-  b <- getWord8
-  let c = toEnum (fromIntegral b) :: Char
-  if isDigit c
-    then (c:) <$> getDigits
-    else fail $ "expected digit, got " ++ [c]
-
--- Special zero: encoded as "0+"
-getVal' :: Get SyrupVal
-getVal' = do
-  b <- lookAhead getWord8
-  if b == 0x30  -- '0'
-    then do
-      _ <- getWord8
-      tag <- getWord8
-      case tag of
-        0x2b -> return (SInt 0)  -- '+'
-        _    -> fail "expected + after 0"
-    else getVal
+  empty <- isEmpty
+  if empty
+    then return []
+    else do
+      b <- lookAhead getWord8
+      let c = toEnum (fromIntegral b) :: Char
+      if isDigit c
+        then getWord8 >> (c:) <$> getDigits
+        else return []
 
 getListUntil :: Char -> Get [SyrupVal]
 getListUntil end = do

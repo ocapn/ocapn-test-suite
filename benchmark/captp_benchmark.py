@@ -306,7 +306,7 @@ def _wait_for_gc_answer(session, answer_position, timeout):
 
 
 def bench_abort(netlayer, ocapn_peer, captp_version, n, timeout):
-    """op:abort — connect, set up session, send op:abort, measure until connection drops."""
+    """op:abort — connect, set up session, send op:abort, then close locally."""
     samples = []
     for _ in range(n):
         session = _new_session(netlayer, ocapn_peer, captp_version)

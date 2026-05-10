@@ -15,7 +15,13 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ZIG_SYRUP="$REPO_ROOT/vendor/zig-syrup"
-ZIG="${ZIG:-/opt/homebrew/bin/zig}"
+if [ -z "${ZIG:-}" ]; then
+    if [ -x /opt/homebrew/bin/zig ]; then
+        ZIG=/opt/homebrew/bin/zig
+    else
+        ZIG=zig
+    fi
+fi
 
 if [ ! -f "$ZIG_SYRUP/src/syrup.zig" ]; then
     echo "error: vendor/zig-syrup not initialised. Run:" >&2
