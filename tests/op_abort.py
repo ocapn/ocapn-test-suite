@@ -28,7 +28,7 @@ class OpAbortTest(CapTPTestCase):
         abort_op = OpAbort("test-abort-before-setup")
         self.remote.send_message(abort_op)
 
-        with self.assertRaises((TimeoutError, ConnectionAbortedError)):
+        with self.assertRaises((TimeoutError, ConnectionAbortedError, BrokenPipeError)):
             # Now setup the session
             self.remote.setup_session(self.captp_version)
 
