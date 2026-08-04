@@ -18,6 +18,7 @@ from contrib import syrup
 from utils.captp_types import CapTPType, decode_captp_message
 from utils.ocapn_uris import OCapNPeer
 from utils.captp import CapTPSession
+from utils.netstrings import Netstring
 
 
 class ReadSocketIO:
@@ -83,15 +84,16 @@ class CapTPSocket(socket.socket):
     def send_message(self, message):
         """ Send data to the remote peer """
         if isinstance(message, CapTPType):
-            message = message.to_syrup()
-        self.sendall(message)
+            message = Netstring(message.to_syrup())
+        self.sendall(message.to_netstring())
 
     def receive_message(self, timeout=120) -> CapTPType:
         """ Receive data from the remote peer """
         socketio = ReadSocketIO(self, timeout=timeout)
-        encoded_message = syrup.syrup_read(socketio)
-        assert isinstance(encoded_message, syrup.Record)
-        return decode_captp_message(encoded_message)
+        next_message = Netstring.read(socketio)
+        message = syrup.syrup_decode(next_message)
+        assert isinstance(message, syrup.Record)
+        return decode_captp_message(message)
 
 
 class Netlayer(ABC):
