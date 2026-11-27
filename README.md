@@ -35,15 +35,13 @@ at the swiss num: "JadQ0++RzsD4M+40uLxTWVaVqM10DcBJ"
 
 ### Car Factory
 
-This takes a single argument which is a sequence, each value in the sequence
-should be a list with two items:
+This takes a single argument which is a list of two elements. The elements are
+as follows:
 
-1. a symbol representing the car model
-2. a symbol representing the color of the car
+1. a symbol representing the color of the car
+2. a symbol representing the car model
 
-It should spawn the same number of "car" objects as there are items in the
-sequence and each car should be of the model and color specified in the
-sequence.
+The car factory should return a car of the color and model provided.
 
 ### Car
 
