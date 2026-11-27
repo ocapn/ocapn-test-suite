@@ -16,7 +16,7 @@ import time
 
 from contrib.syrup import Symbol
 from utils.test_suite import CapTPTestCase, retry_on_network_timeout
-from utils.captp_types import OpGcExports, OpGcAnswers, OpDeliver
+from utils.captp_types import OpGcExports, OpGcAnswers, OpDeliverOnly
 
 class GCTestCase(CapTPTestCase):
 
@@ -60,8 +60,11 @@ class OpGcExportsTest(GCTestCase):
         # The idea here is we're specificing `a_local_obj` in the message, but once the other side
         # has delivered the message, the echo actor shouldn't have any need for this and will cause
         # a GC to occur.
-        deliver_op = OpDeliver(echo_gc_refr, [a_local_obj], False, False)
-        self.remote.send_message(deliver_op)
+        deliver_only_op = OpDeliverOnly(
+            echo_gc_refr,
+            [a_local_obj]
+        )
+        self.remote.send_message(deliver_only_op)
 
         timeout = 15
         while timeout > 0:
@@ -83,8 +86,11 @@ class OpGcExportsTest(GCTestCase):
         a_local_obj = self.remote.next_import_object
         ref_count = 4
 
-        deliver_op = OpDeliver(echo_gc_refr, [a_local_obj]*ref_count, False, False)
-        self.remote.send_message(deliver_op)
+        deliver_only_op = OpDeliverOnly(
+            echo_gc_refr,
+            [a_local_obj]*ref_count
+        )
+        self.remote.send_message(deliver_only_op)
 
         # The GC operation messages could be sent as one or multiple messages, so long as
         # the wire delta of all messages add up to the wire delta we're expecting it's
@@ -111,8 +117,11 @@ class OpGcExportsTest(GCTestCase):
         ref_count = 4
 
         for i in range(ref_count):
-            deliver_op = OpDeliver(echo_gc_refr, [a_local_obj], False, False)
-            self.remote.send_message(deliver_op)
+            deliver_only_op = OpDeliverOnly(
+                echo_gc_refr,
+                [a_local_obj]
+            )
+            self.remote.send_message(deliver_only_op)
 
         # The GC operation messages could be sent as one or multiple messages, so long as
         # the wire delta of all messages add up to the wire delta we're expecting it's
@@ -139,17 +148,19 @@ class OpGcAnswersTest(GCTestCase):
         greeter_ref = self.remote.fetch_object(b"VMDDd1voKWarCe2GvgLbxbVFysNzRPzx")
 
         object_to_greet = self.remote.next_import_object
-        op_deliver = OpDeliver(greeter_ref, [object_to_greet], False, False)
-        self.remote.send_message(op_deliver)
+        op_deliver_only = OpDeliverOnly(
+            greeter_ref,
+            [object_to_greet]
+        )
+        self.remote.send_message(op_deliver_only)
 
         # Once we've got the greeting, we'll fulfill the promise then
         # wait for the GC operation which should come soon after.
         greeting_op = self.remote.expect_message_to(object_to_greet.to_desc_export())
 
-        greeting_reply = OpDeliver(
+        greeting_reply = OpDeliverOnly(
             greeting_op.exported_resolve_me_desc,
-            [Symbol("fulfill"), "Hello"],
-            False, False
+            [Symbol("fulfill"), "Hello"]
         )
         self.remote.send_message(greeting_reply)
 

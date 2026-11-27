@@ -91,7 +91,10 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         handoff_give = signed_handoff_give.object
 
         # Send a message to the gifter with the handoff give
-        deliver_msg = captp_types.OpDeliver(self.g2r_greeter, [signed_handoff_give], False, False)
+        deliver_msg = captp_types.OpDeliverOnly(
+            self.g2r_greeter,
+            [signed_handoff_give]
+        )
         self.g2r_session.send_message(deliver_msg)
 
         # The receiver should connect to us
@@ -128,7 +131,10 @@ class HandoffRemoteAsReciever(HandoffTestCase):
         handoff_give = signed_handoff_give.object
 
         # Send a message to the greeter with our handoff give.
-        deliver_msg = captp_types.OpDeliver(self.g2r_greeter, [signed_handoff_give], False, False)
+        deliver_msg = captp_types.OpDeliverOnly(
+            self.g2r_greeter,
+            [signed_handoff_give]
+        )
         self.g2r_session.send_message(deliver_msg)
 
         # The receiver should connect to us
@@ -216,11 +222,9 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         handoff_give = signed_handoff_give.object
 
         # Deposit the gift with the exporter
-        deposit_gift_msg = captp_types.OpDeliver(
+        deposit_gift_msg = captp_types.OpDeliverOnly(
             self.g2e_session.bootstrap_object.to_desc_export(),
-            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr],
-            False,
-            False
+            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
 
@@ -256,11 +260,9 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         self.r2e_session.send_message(withdraw_gift_msg)
 
         # Deposit the gift with the exporter
-        deposit_gift_msg = captp_types.OpDeliver(
+        deposit_gift_msg = captp_types.OpDeliverOnly(
             self.g2e_session.bootstrap_object.to_desc_export(),
-            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr],
-            False,
-            False
+            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
 
@@ -291,11 +293,9 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         handoff_give = signed_handoff_give.object
 
         # Deposit the gift with the exporter
-        deposit_gift_msg = captp_types.OpDeliver(
+        deposit_gift_msg = captp_types.OpDeliverOnly(
             self.g2e_session.bootstrap_object.to_desc_export(),
-            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr],
-            False,
-            False
+            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
 
@@ -329,11 +329,9 @@ class HandoffRemoteAsExporter(HandoffTestCase):
         handoff_give = signed_handoff_give.object
 
         # Deposit the gift with the exporter
-        deposit_gift_msg = captp_types.OpDeliver(
+        deposit_gift_msg = captp_types.OpDeliverOnly(
             self.g2e_session.bootstrap_object.to_desc_export(),
-            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr],
-            False,
-            False
+            [Symbol("deposit-gift"), handoff_give.gift_id, self.g2e_greeter_refr]
         )
         self.g2e_session.send_message(deposit_gift_msg)
 
@@ -407,11 +405,9 @@ class HandoffRemoteAsGifter(HandoffTestCase):
         self.assertEqual(fetch_object_msg.args[0], Symbol("fetch"))
         self.assertEqual(fetch_object_msg.args[1], sturdyref.swiss_num)
 
-        fetch_object_reply = captp_types.OpDeliver(
+        fetch_object_reply = captp_types.OpDeliverOnly(
             fetch_object_msg.exported_resolve_me_desc,
-            [Symbol("fulfill"), self.e2g_session.next_import_object],
-            False,
-            False
+            [Symbol("fulfill"), self.e2g_session.next_import_object]
         )
         self.e2g_session.send_message(fetch_object_reply)
 
