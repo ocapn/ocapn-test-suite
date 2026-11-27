@@ -83,7 +83,7 @@ class OpDeliverTest(CapTPTestCase):
         # us a car.
         build_car_op = OpDeliver(
             to=build_car_factory_op.vow,
-            args=[[Symbol("red"), Symbol("zoomracer")]],
+            args=[Symbol("red"), Symbol("zoomracer")],
             answer_position=self.remote.next_answer.position,
             resolve_me_desc=self.remote.next_import_object
         )
