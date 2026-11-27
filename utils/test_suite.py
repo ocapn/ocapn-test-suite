@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-
+import time
 
 def retry_on_network_timeout(func, retries=3):
     """ Decorator which retries upon a network timeout """
@@ -31,16 +31,25 @@ def retry_on_network_timeout(func, retries=3):
 
 class CapTPTestLoader(unittest.loader.TestLoader):
     """ Custom loader which provides the netlayer when constructing the test cases """
-    def __init__(self, netlayer, ocapn_uri, captp_version, *args, **kwargs):
+    def __init__(self, netlayer, ocapn_uri, captp_version, test_delay, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.netlayer = netlayer
         self.ocapn_uri = ocapn_uri
         self.captp_version = captp_version
+        self.test_delay = test_delay
 
     def loadTestsFromTestCase(self, test_case_class):
         if issubclass(test_case_class, CapTPTestCase):
             names = self.getTestCaseNames(test_case_class)
-            tests = [test_case_class(self.netlayer, self.ocapn_uri, self.captp_version, method_name) for method_name in names]
+            tests = []
+            for method_name in names:
+                tests.append(test_case_class(
+                    self.netlayer,
+                    self.ocapn_uri,
+                    self.captp_version,
+                    self.test_delay,
+                    method_name
+                ))
             return self.suiteClass(tests)
 
         return super().loadTestsFromTestCase(test_case_class)
@@ -48,14 +57,20 @@ class CapTPTestLoader(unittest.loader.TestLoader):
 
 class CapTPTestRunner(unittest.TextTestRunner):
 
-    def __init__(self, netlayer, ocapn_uri, captp_version, *args, **kwargs):
+    def __init__(self, netlayer, ocapn_uri, captp_version, test_delay, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.netlayer = netlayer
         self.ocapn_uri = ocapn_uri
         self.captp_version = captp_version
+        self.test_delay = test_delay
 
     def loadTests(self, test_module=None):
-        loader = CapTPTestLoader(self.netlayer, self.ocapn_uri, self.captp_version)
+        loader = CapTPTestLoader(
+            self.netlayer,
+            self.ocapn_uri,
+            self.captp_version,
+            self.test_delay
+        )
         if test_module:
             return loader.loadTestsFromName(test_module)
         return loader.discover("tests", pattern="*.py")
@@ -64,7 +79,7 @@ class CapTPTestRunner(unittest.TextTestRunner):
 class CapTPTestCase(unittest.TestCase):
     """ Base class for all CapTP tests """
 
-    def __init__(self, netlayer, ocapn_uri, captp_version, *args, **kwargs):
+    def __init__(self, netlayer, ocapn_uri, captp_version, test_delay=0, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.netlayer = netlayer
         self.ocapn_uri = ocapn_uri
@@ -72,6 +87,7 @@ class CapTPTestCase(unittest.TestCase):
         self.remote = None
         self._next_answer_pos = 0
         self._next_import_object_pos = 0
+        self.test_delay = test_delay
 
     @retry_on_network_timeout
     def setUp(self) -> None:
@@ -81,4 +97,5 @@ class CapTPTestCase(unittest.TestCase):
     def tearDown(self) -> None:
         if self.remote is not None:
             self.remote.close()
+        time.sleep(self.test_delay)
         return super().tearDown()

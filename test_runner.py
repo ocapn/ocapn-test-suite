@@ -61,6 +61,12 @@ if __name__ == "__main__":
         default=False,
         action="store_true"
     )
+    parser.add_argument(
+        "--test-delay",
+        help="Sets a delay (in seconds) after each test",
+        default=0,
+        type=int
+    )
     args = parser.parse_args()
 
     # Parse and validate the address
@@ -74,7 +80,13 @@ if __name__ == "__main__":
 
     verbosity = 2 if args.verbose else 1
 
-    runner = CapTPTestRunner(netlayer, ocapn_peer_uri, args.captp_version, verbosity=verbosity)
+    runner = CapTPTestRunner(
+        netlayer,
+        ocapn_peer_uri,
+        args.captp_version,
+        args.test_delay,
+        verbosity=verbosity
+    )
     suite = runner.loadTests(args.test_module)
     result = runner.run(suite)
 
